@@ -6,7 +6,7 @@ import './styles/theme.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter basename="/sedad-tracker-v3">
+    <BrowserRouter basename="/sedad-tracker-V2">
       <App />
     </BrowserRouter>
   </React.StrictMode>,
