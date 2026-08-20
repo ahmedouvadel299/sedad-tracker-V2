@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import LogoIcon from './logo.js'
+import LogoIcon from './logo.jsx'
 
 const PHRASES = [
   "Votre régularité fait la force de l'équipe.",
