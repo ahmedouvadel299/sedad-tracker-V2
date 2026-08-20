@@ -4,7 +4,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { ref, onValue, update } from 'firebase/database'
 import { auth, db } from '../firebase.js'
 import { useServerTimeOffset } from '../lib/useServerTime.js'
-import LogoIcon from './logo.js'
+import LogoIcon from './logo.jsx'
 
 const RAISONS_ECHEC = ['Injoignable', 'En cours', 'Refus', 'Numéro erroné', 'Autre']
 const RAISONS_SUCCES = [
