@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { LOGO_BASE64 } from './logo.js'
 
 const PHRASES = [
   "Votre régularité fait la force de l'équipe.",
@@ -40,16 +41,7 @@ function WelcomeSplash() {
     <div className="splash">
       <div className="splash-badge">
         <div className="splash-badge-inner">
-          <svg viewBox="0 0 24 24" width="40" height="40" fill="none">
-            <path
-              d="M4 14L9 9L13 13L20 6"
-              stroke="#c9a24b"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path d="M15 6H20V11" stroke="#c9a24b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <img src={LOGO_BASE64} alt="Sedad" width="56" height="56" />
         </div>
       </div>
 
