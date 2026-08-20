@@ -19,3 +19,64 @@ body {
 h1 {
   color: var(--olive);
 }
+
+.login-page {
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.login-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.login-tabs button {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid var(--olive);
+  background: white;
+  color: var(--olive);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.login-tabs button.active {
+  background: var(--olive);
+  color: white;
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.login-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+
+.login-form input {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 16px;
+}
+
+.login-form button[type='submit'] {
+  padding: 10px;
+  background: var(--gold);
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.login-erreur {
+  color: #b3261e;
+  margin-top: 12px;
+}
