@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 
 const PHRASES = [
   "Votre régularité fait la force de l'équipe.",
@@ -18,20 +18,23 @@ function heureSalutation() {
 
 function WelcomeSplash() {
   const navigate = useNavigate()
-  const location = useLocation()
-  const { nom, destination } = location.state || {}
   const [phrase] = useState(PHRASES[Math.floor(Math.random() * PHRASES.length)])
+  const [data] = useState(() => {
+    const stored = sessionStorage.getItem('sedad_splash')
+    return stored ? JSON.parse(stored) : null
+  })
 
   useEffect(() => {
-    if (!destination) {
+    if (!data || !data.destination) {
       navigate('/', { replace: true })
       return
     }
     const timer = setTimeout(() => {
-      navigate(destination, { replace: true })
+      sessionStorage.removeItem('sedad_splash')
+      navigate(data.destination, { replace: true })
     }, 2200)
     return () => clearTimeout(timer)
-  }, [destination, navigate])
+  }, [data, navigate])
 
   return (
     <div className="splash">
@@ -51,7 +54,7 @@ function WelcomeSplash() {
       </div>
 
       <p className="splash-label">{heureSalutation().toUpperCase()}</p>
-      <h1 className="splash-nom">{nom || 'Utilisateur'}</h1>
+      <h1 className="splash-nom">{data?.nom || 'Utilisateur'}</h1>
       <p className="splash-phrase">{phrase}</p>
 
       <p className="splash-footer">
