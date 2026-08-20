@@ -20,13 +20,19 @@ function Login() {
   const [erreur, setErreur] = useState('')
   const [chargement, setChargement] = useState(false)
 
-  async function redirigerSelonRole(uid) {
+  async function allerVersSplash(uid, nomAffiche) {
     const snap = await get(ref(db, `roles/${uid}`))
     const role = snap.exists() ? snap.val() : null
-    if (role === 'admin') navigate('/admin')
-    else if (role === 'observer') navigate('/observateur')
-    else if (role === 'agent') navigate('/agent')
-    else setErreur("Aucun rôle attribué à ce compte. Contactez l'administrateur.")
+    let destination = null
+    if (role === 'admin') destination = '/admin'
+    else if (role === 'observer') destination = '/observateur'
+    else if (role === 'agent') destination = '/agent'
+
+    if (!destination) {
+      setErreur("Aucun rôle attribué à ce compte. Contactez l'administrateur.")
+      return
+    }
+    navigate('/bienvenue', { state: { nom: nomAffiche, destination } })
   }
 
   async function handleAgentSubmit(e) {
@@ -36,7 +42,7 @@ function Login() {
     try {
       const { email, password } = agentCredentials(nom, pin)
       const cred = await signInWithEmailAndPassword(auth, email, password)
-      await redirigerSelonRole(cred.user.uid)
+      await allerVersSplash(cred.user.uid, nom)
     } catch (err) {
       setErreur('Nom ou code PIN incorrect.')
     } finally {
@@ -50,7 +56,8 @@ function Login() {
     setChargement(true)
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password)
-      await redirigerSelonRole(cred.user.uid)
+      const nomAffiche = email.split('@')[0]
+      await allerVersSplash(cred.user.uid, nomAffiche)
     } catch (err) {
       setErreur('Email ou mot de passe incorrect.')
     } finally {
