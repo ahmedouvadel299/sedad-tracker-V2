@@ -156,3 +156,289 @@ h1 {
   color: #9fae93;
   font-size: 13px;
 }
+/* Agent screen */
+.agent-page {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.agent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.btn-deconnexion {
+  border: 1px solid var(--olive-light);
+  background: transparent;
+  color: var(--cream);
+  border-radius: 20px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.agent-header-nom {
+  font-weight: bold;
+  color: var(--cream);
+}
+
+.agent-header-titre {
+  text-align: right;
+  font-family: Georgia, serif;
+  color: var(--cream);
+}
+
+.agent-header-banque {
+  font-size: 12px;
+  color: #b9c4ae;
+  font-family: system-ui, sans-serif;
+}
+
+.pill-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.pill-tabs button {
+  border: 1px solid var(--gold);
+  background: transparent;
+  color: var(--cream);
+  border-radius: 20px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.pill-tabs button.active {
+  background: var(--gold);
+  color: var(--olive-dark);
+  font-weight: bold;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--olive-light);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.recherche-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--olive-light);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--cream);
+  margin-bottom: 12px;
+}
+
+.liste-vide {
+  color: #9fae93;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.contact-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 12px;
+}
+
+.contact-row:last-child {
+  border-bottom: none;
+}
+
+.contact-info {
+  text-align: right;
+  flex: 1;
+}
+
+.contact-nom {
+  font-weight: bold;
+  color: var(--cream);
+}
+
+.contact-tel {
+  font-size: 13px;
+  color: #b9c4ae;
+}
+
+.contact-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.icon-echec {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.icon-succes {
+  border-color: var(--mint);
+  color: var(--mint);
+}
+
+.icon-appel {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.appel-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 50;
+}
+
+.appel-carte {
+  background: var(--olive-dark);
+  border: 1px solid var(--gold);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  max-width: 320px;
+  width: 100%;
+}
+
+.appel-label {
+  color: #b9c4ae;
+  margin: 0 0 8px;
+}
+
+.appel-minuteur {
+  font-size: 40px;
+  font-weight: bold;
+  color: var(--gold);
+  margin: 0 0 8px;
+}
+
+.appel-minuteur.anormal {
+  color: var(--danger);
+}
+
+.appel-alerte {
+  color: var(--danger);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.appel-boutons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.appel-boutons .icon-btn {
+  width: auto;
+  padding: 8px 14px;
+  border-radius: 20px;
+  gap: 6px;
+}
+
+.btn-annuler {
+  border: 1px solid var(--olive-light);
+  background: transparent;
+  color: var(--cream);
+  border-radius: 20px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.raisons-liste {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.raison-btn {
+  border: 1px solid var(--olive-light);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--cream);
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.raison-btn:hover {
+  border-color: var(--gold);
+}
+
+.aujourdhui-panel {
+  text-align: center;
+}
+
+.salutation {
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.alerte-retard {
+  background: rgba(224, 161, 161, 0.15);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.progres-cercle-wrapper {
+  display: flex;
+  justify-content: center;
+}
+
+.progres-cercle {
+  --pct: 0;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: conic-gradient(var(--mint) calc(var(--pct) * 1%), rgba(255, 255, 255, 0.1) 0);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.progres-chiffre {
+  font-size: 36px;
+  font-weight: bold;
+  color: var(--cream);
+}
+
+.progres-total {
+  font-size: 12px;
+  color: #b9c4ae;
+}
