@@ -560,3 +560,142 @@ h1 {
 .badge-echec {
   color: var(--danger);
 }
+/* Confirmation overlay (succès/échec avec raisons) */
+.confirmation-carte {
+  max-width: 380px;
+  text-align: left;
+}
+
+.confirmation-titre {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--cream);
+  margin: 0 0 16px;
+  text-align: center;
+}
+
+.raisons-grille {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.raison-succes {
+  border-color: var(--mint);
+}
+
+.raison-succes:hover {
+  background: rgba(127, 217, 168, 0.15);
+}
+
+.raison-echec {
+  border-color: var(--danger);
+}
+
+.raison-echec:hover {
+  background: rgba(224, 161, 161, 0.15);
+}
+
+.duree-affichage {
+  background: rgba(127, 217, 168, 0.1);
+  border: 1px solid var(--mint);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.duree-label {
+  color: #b9c4ae;
+  font-size: 13px;
+  margin: 0 0 4px;
+}
+
+.duree-valeur {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--mint);
+  margin: 0 0 4px;
+}
+
+.duree-note {
+  color: #9fae93;
+  font-size: 11px;
+  margin: 0;
+}
+
+.btn-annuler-large {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.classement-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.classement-row:last-child {
+  border-bottom: none;
+}
+
+.classement-rang {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: var(--olive-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.classement-nom {
+  flex: 1;
+  color: var(--cream);
+  font-weight: bold;
+}
+
+.classement-score {
+  color: #b9c4ae;
+  font-size: 13px;
+}
+
+.heure-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.heure-taux {
+  width: 44px;
+  color: var(--gold);
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.heure-barre-fond {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.heure-barre {
+  height: 100%;
+  background: var(--mint);
+}
+
+.heure-label {
+  width: 50px;
+  text-align: right;
+  color: #b9c4ae;
+  font-size: 13px;
+}
