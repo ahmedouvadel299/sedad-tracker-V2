@@ -4,6 +4,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { ref, onValue, update } from 'firebase/database'
 import { auth, db } from '../firebase.js'
 import { useServerTimeOffset } from '../lib/useServerTime.js'
+import LogoIcon from './logo.js'
 
 const RAISONS_ECHEC = ['Injoignable', 'En cours', 'Refus', 'Numéro erroné', 'Autre']
 const RAISONS_SUCCES = [
@@ -143,9 +144,12 @@ function AgentDashboard() {
           Déconnexion
         </button>
         <div className="agent-header-nom">{nom}</div>
-        <div className="agent-header-titre">
-          Registre SEDAD
-          <div className="agent-header-banque">البنك الموريتاني للاستثمار</div>
+        <div className="agent-header-titre-wrapper">
+          <div className="agent-header-titre">
+            Registre SEDAD
+            <div className="agent-header-banque">البنك الموريتاني للاستثمار</div>
+          </div>
+          <LogoIcon size={40} />
         </div>
       </header>
 
