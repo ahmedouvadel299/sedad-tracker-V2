@@ -32,7 +32,9 @@ function Login() {
       setErreur("Aucun rôle attribué à ce compte. Contactez l'administrateur.")
       return
     }
-    navigate('/bienvenue', { state: { nom: nomAffiche, destination } })
+
+    sessionStorage.setItem('sedad_splash', JSON.stringify({ nom: nomAffiche, destination }))
+    navigate('/bienvenue')
   }
 
   async function handleAgentSubmit(e) {
