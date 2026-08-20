@@ -442,3 +442,121 @@ h1 {
   font-size: 12px;
   color: #b9c4ae;
 }
+/* Admin screen */
+.admin-page {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.stat-box {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--olive-light);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+}
+
+.stat-chiffre {
+  font-size: 28px;
+  font-weight: bold;
+  color: var(--gold);
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #b9c4ae;
+  margin-top: 4px;
+}
+
+.hint {
+  color: #9fae93;
+  font-size: 13px;
+  margin: 4px 0 12px;
+}
+
+.select-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.select-label select {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--olive-light);
+  background: var(--olive-dark);
+  color: var(--cream);
+}
+
+.btn-primaire {
+  background: var(--gold);
+  border: none;
+  border-radius: 8px;
+  padding: 10px 18px;
+  color: var(--olive-dark);
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.statut-import {
+  margin-top: 12px;
+  color: var(--mint);
+}
+
+.agent-row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px 0;
+  cursor: pointer;
+}
+
+.agent-row:last-child {
+  border-bottom: none;
+}
+
+.agent-row-header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+  color: var(--cream);
+}
+
+.agent-row-detail {
+  font-size: 13px;
+  color: #b9c4ae;
+  margin-top: 4px;
+}
+
+.agent-contacts-liste {
+  margin-top: 10px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.contact-row-mini {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.badge-en_attente {
+  color: var(--gold);
+}
+
+.badge-traite {
+  color: var(--mint);
+}
+
+.badge-echec {
+  color: var(--danger);
+}
