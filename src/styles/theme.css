@@ -23,6 +23,17 @@ body {
 h1 {
   color: var(--cream);
 }
+.agent-header-titre-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.agent-header-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
 
 .login-page {
   max-width: 360px;
