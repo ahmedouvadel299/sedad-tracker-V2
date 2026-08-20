@@ -5,7 +5,7 @@ import { ref, onValue, update, get } from 'firebase/database'
 import * as XLSX from 'xlsx'
 import { db, auth } from '../firebase.js'
 import RapportsPanel from './RapportsPanel.jsx'
-import { LOGO_BASE64 } from './logo.js'
+import LogoIcon from './logo.js'
 
 const AGENTS = {
   Nh768OOap7W0VxDs6u7dxER0WbP2: 'Fatimetou ebloul',
@@ -96,7 +96,7 @@ function AdminDashboard() {
             Registre SEDAD
             <div className="agent-header-banque">البنك الموريتاني للاستثمار</div>
           </div>
-          <img src={LOGO_BASE64} alt="Sedad" className="agent-header-logo" />
+          <LogoIcon size={40} />
         </div>
       </header>
 
