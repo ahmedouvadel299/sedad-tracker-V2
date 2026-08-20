@@ -699,3 +699,44 @@ h1 {
   color: #b9c4ae;
   font-size: 13px;
 }
+/* Rapports */
+.rapport-boutons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.btn-secondaire {
+  background: transparent;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+}
+
+.select-label input[type='date'] {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--olive-light);
+  background: var(--olive-dark);
+  color: var(--cream);
+}
+
+.btn-actualiser {
+  border: 1px solid var(--gold);
+  background: transparent;
+  color: var(--gold);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  margin: 4px 0;
+}
+
+.btn-actualiser:disabled {
+  opacity: 0.6;
+}
+
+.derniere-maj {
+  font-size: 11px;
+  color: #9fae93;
+}
