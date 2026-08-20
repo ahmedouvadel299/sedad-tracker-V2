@@ -6,6 +6,16 @@ import { auth, db } from '../firebase.js'
 import { useServerTimeOffset } from '../lib/useServerTime.js'
 
 const RAISONS_ECHEC = ['Injoignable', 'En cours', 'Refus', 'Numéro erroné', 'Autre']
+const RAISONS_SUCCES = [
+  'Déjà validé',
+  'Validé',
+  'Blocage',
+  'Mot de passe oublié',
+  'Changement de numéro',
+  'Changement de téléphone',
+  'Autre',
+  "Le client n'a pas connaissance de son compte",
+]
 const SEUIL_DUREE_ANORMALE = 15 * 60 * 1000
 
 function formatDuree(ms) {
@@ -13,6 +23,11 @@ function formatDuree(ms) {
   const min = Math.floor(totalSec / 60)
   const sec = totalSec % 60
   return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+}
+
+function formatDureeCourte(sec) {
+  if (sec < 60) return `${sec}s`
+  return `${Math.floor(sec / 60)}min`
 }
 
 function AgentDashboard() {
@@ -82,32 +97,24 @@ function AgentDashboard() {
     setMaintenant(serverNow())
   }
 
-  async function terminerAppel(contactId, resultat) {
+  function ouvrirConfirmation(contactId, type) {
     const debut = appelEnCours?.debut
-    let dureeMs = debut ? serverNow() - debut : 0
+    const dureeMs = debut ? serverNow() - debut : 0
     const anormale = dureeMs > SEUIL_DUREE_ANORMALE
-
-    if (resultat === 'succes') {
-      await update(ref(db, `calllists_by_agent/${uid}/${contactId}`), {
-        statut: 'traite',
-        resultat: 'succes',
-        dureeAppelSec: Math.round(dureeMs / 1000),
-        dureeAnormale: anormale,
-      })
-      setAppelEnCours(null)
-    } else {
-      setContactPourRaison({ contactId, dureeMs, anormale })
-    }
+    setContactPourRaison({ contactId, type, dureeMs, anormale })
   }
 
-  async function confirmerEchec(raison) {
+  async function confirmerRaison(raison) {
     if (!contactPourRaison) return
-    const { contactId, dureeMs, anormale } = contactPourRaison
+    const { contactId, type, dureeMs, anormale } = contactPourRaison
+    const maintenantMs = serverNow()
     await update(ref(db, `calllists_by_agent/${uid}/${contactId}`), {
-      statut: 'echec',
+      statut: type === 'succes' ? 'traite' : 'echec',
       raison,
       dureeAppelSec: Math.round(dureeMs / 1000),
       dureeAnormale: anormale,
+      dateTraite: maintenantMs,
+      heureAppel: new Date(maintenantMs).getHours(),
     })
     setContactPourRaison(null)
     setAppelEnCours(null)
@@ -115,6 +122,10 @@ function AgentDashboard() {
 
   function annulerAppelEnCours() {
     setAppelEnCours(null)
+  }
+
+  function annulerConfirmation() {
+    setContactPourRaison(null)
   }
 
   async function deconnexion() {
@@ -175,7 +186,7 @@ function AgentDashboard() {
                 <button
                   className="icon-btn icon-echec"
                   disabled={appelEnCours?.contactId !== c.id}
-                  onClick={() => terminerAppel(c.id, 'echec')}
+                  onClick={() => ouvrirConfirmation(c.id, 'echec')}
                   aria-label="Échec"
                 >
                   ✕
@@ -183,7 +194,7 @@ function AgentDashboard() {
                 <button
                   className="icon-btn icon-succes"
                   disabled={appelEnCours?.contactId !== c.id}
-                  onClick={() => terminerAppel(c.id, 'succes')}
+                  onClick={() => ouvrirConfirmation(c.id, 'succes')}
                   aria-label="Succès"
                 >
                   ✓
@@ -206,7 +217,7 @@ function AgentDashboard() {
         </div>
       )}
 
-      {appelEnCours && (
+      {appelEnCours && !contactPourRaison && (
         <div className="appel-overlay">
           <div className="appel-carte">
             <p className="appel-label">Appel en cours…</p>
@@ -217,10 +228,10 @@ function AgentDashboard() {
               <p className="appel-alerte">Durée anormalement longue — vérifiez la ligne.</p>
             )}
             <div className="appel-boutons">
-              <button className="icon-btn icon-echec" onClick={() => terminerAppel(appelEnCours.contactId, 'echec')}>
+              <button className="icon-btn icon-echec" onClick={() => ouvrirConfirmation(appelEnCours.contactId, 'echec')}>
                 ✕ Échec
               </button>
-              <button className="icon-btn icon-succes" onClick={() => terminerAppel(appelEnCours.contactId, 'succes')}>
+              <button className="icon-btn icon-succes" onClick={() => ouvrirConfirmation(appelEnCours.contactId, 'succes')}>
                 ✓ Succès
               </button>
               <button className="btn-annuler" onClick={annulerAppelEnCours}>
@@ -233,15 +244,34 @@ function AgentDashboard() {
 
       {contactPourRaison && (
         <div className="appel-overlay">
-          <div className="appel-carte">
-            <p className="appel-label">Raison de l'échec</p>
-            <div className="raisons-liste">
-              {RAISONS_ECHEC.map((r) => (
-                <button key={r} className="raison-btn" onClick={() => confirmerEchec(r)}>
+          <div className="appel-carte confirmation-carte">
+            <p className="confirmation-titre">
+              {contactPourRaison.type === 'succes' ? 'Confirmer la réussite' : "Confirmer l'échec"}
+            </p>
+
+            <div className="raisons-grille">
+              {(contactPourRaison.type === 'succes' ? RAISONS_SUCCES : RAISONS_ECHEC).map((r) => (
+                <button
+                  key={r}
+                  className={`raison-btn ${contactPourRaison.type === 'succes' ? 'raison-succes' : 'raison-echec'}`}
+                  onClick={() => confirmerRaison(r)}
+                >
                   {r}
                 </button>
               ))}
             </div>
+
+            <div className="duree-affichage">
+              <p className="duree-label">Durée de l'appel</p>
+              <p className="duree-valeur">{formatDureeCourte(Math.round(contactPourRaison.dureeMs / 1000))}</p>
+              <p className="duree-note">
+                Mesurée automatiquement depuis l'appui sur le bouton d'appel 📞 — non modifiable
+              </p>
+            </div>
+
+            <button className="btn-annuler btn-annuler-large" onClick={annulerConfirmation}>
+              Annuler
+            </button>
           </div>
         </div>
       )}
