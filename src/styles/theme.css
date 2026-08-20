@@ -1,15 +1,19 @@
 :root {
-  --olive: #4a5d3a;
+  --olive-dark: #16241a;
+  --olive: #3a4f2f;
+  --olive-light: #5c7a4a;
   --gold: #c9a24b;
-  --mint: #a8d5ba;
-  --bg: #f7f6f2;
+  --mint: #7fd9a8;
+  --cream: #f3efe3;
+  --danger: #e0a1a1;
 }
 
 body {
   margin: 0;
   font-family: system-ui, sans-serif;
-  background: var(--bg);
-  color: #222;
+  background: radial-gradient(circle at 50% 30%, var(--olive) 0%, var(--olive-dark) 75%);
+  color: var(--cream);
+  min-height: 100vh;
 }
 
 .page {
@@ -17,7 +21,7 @@ body {
 }
 
 h1 {
-  color: var(--olive);
+  color: var(--cream);
 }
 
 .login-page {
@@ -34,16 +38,17 @@ h1 {
 .login-tabs button {
   flex: 1;
   padding: 8px;
-  border: 1px solid var(--olive);
-  background: white;
-  color: var(--olive);
-  border-radius: 6px;
+  border: 1px solid var(--gold);
+  background: transparent;
+  color: var(--cream);
+  border-radius: 20px;
   cursor: pointer;
 }
 
 .login-tabs button.active {
-  background: var(--olive);
-  color: white;
+  background: var(--gold);
+  color: var(--olive-dark);
+  font-weight: bold;
 }
 
 .login-form {
@@ -57,13 +62,16 @@ h1 {
   flex-direction: column;
   gap: 4px;
   font-size: 14px;
+  color: var(--cream);
 }
 
 .login-form input {
   padding: 10px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--olive-light);
   border-radius: 6px;
   font-size: 16px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--cream);
 }
 
 .login-form button[type='submit'] {
@@ -71,12 +79,80 @@ h1 {
   background: var(--gold);
   border: none;
   border-radius: 6px;
-  color: white;
+  color: var(--olive-dark);
   font-weight: bold;
   cursor: pointer;
 }
 
 .login-erreur {
-  color: #b3261e;
+  color: var(--danger);
   margin-top: 12px;
+}
+
+.splash {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  gap: 10px;
+}
+
+.splash-badge {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: splash-pop 0.6s ease-out;
+  margin-bottom: 8px;
+}
+
+.splash-badge-inner {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes splash-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.splash-label {
+  letter-spacing: 2px;
+  color: #b9c4ae;
+  font-size: 13px;
+  margin: 4px 0 0;
+}
+
+.splash-nom {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 32px;
+  margin: 4px 0;
+  color: var(--cream);
+}
+
+.splash-phrase {
+  color: #cdd6c4;
+  margin: 4px 0 24px;
+}
+
+.splash-footer {
+  color: #9fae93;
+  font-size: 13px;
 }
