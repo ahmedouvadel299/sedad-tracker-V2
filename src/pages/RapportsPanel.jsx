@@ -6,7 +6,7 @@ import { LOGO_BASE64 } from './logo.js'
 
 const NOM_ADMIN_SIGNATURE = 'Sellem brahim'
 const TITRE_ADMIN_SIGNATURE = 'Responsable de centre — contact'
-const BANQUE = 'البنك الموريتاني للاستثمار'
+const BANQUE = 'Banque Mauritanienne pour l\'Investissement'
 
 const TYPES_RAPPORT = [
   { valeur: 'mensuel', label: "Résumé de l'équipe (mensuel)" },
