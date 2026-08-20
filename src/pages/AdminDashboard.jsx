@@ -19,6 +19,22 @@ const AGENTS = {
   Ia1Jc3lTPrOpOTvKWS8SSwjEWIR2: 'Emna Aicha Eboubecar',
 }
 
+const RAISONS_RETRY = ['Injoignable', 'En cours']
+
+function normaliserCle(cle) {
+  return cle.toString().trim().toLowerCase()
+}
+
+function extraireValeur(ligne, candidats) {
+  const cles = Object.keys(ligne)
+  for (const cle of cles) {
+    if (candidats.includes(normaliserCle(cle))) {
+      return ligne[cle]
+    }
+  }
+  return ''
+}
+
 function AdminDashboard() {
   const navigate = useNavigate()
   const [onglet, setOnglet] = useState('listes')
@@ -81,46 +97,151 @@ function AdminDashboard() {
 }
 
 function VueEnsemble({ toutesLesListes }) {
-  const stats = useMemo(() => {
-    let enAttente = 0
-    let traites = 0
-    let echecs = 0
-    Object.values(toutesLesListes).forEach((contacts) => {
-      Object.values(contacts || {}).forEach((c) => {
-        if (c.statut === 'en_attente') enAttente++
-        else if (c.statut === 'traite') traites++
-        else if (c.statut === 'echec') echecs++
-      })
+  const tousLesContacts = useMemo(() => {
+    const liste = []
+    Object.entries(toutesLesListes).forEach(([agentUid, contacts]) => {
+      Object.values(contacts || {}).forEach((c) => liste.push({ ...c, agentUid }))
     })
-    return { enAttente, traites, echecs, total: enAttente + traites + echecs }
+    return liste
   }, [toutesLesListes])
 
+  const stats = useMemo(() => {
+    let nonAppeles = 0
+    let traites = 0
+    let aRappeler = 0
+    let echecsDefinitifs = 0
+    tousLesContacts.forEach((c) => {
+      if (c.statut === 'en_attente') nonAppeles++
+      else if (c.statut === 'traite') traites++
+      else if (c.statut === 'echec') {
+        if (RAISONS_RETRY.includes(c.raison)) aRappeler++
+        else echecsDefinitifs++
+      }
+    })
+    return {
+      totalContacts: traites + echecsDefinitifs + aRappeler,
+      nonAppeles,
+      traites,
+      aRappeler,
+      echecsDefinitifs,
+    }
+  }, [tousLesContacts])
+
   return (
-    <div className="card">
-      <div className="stats-grid">
-        <div className="stat-box">
-          <div className="stat-chiffre">{stats.total}</div>
-          <div className="stat-label">Total contacts</div>
-        </div>
-        <div className="stat-box">
-          <div className="stat-chiffre">{stats.enAttente}</div>
-          <div className="stat-label">En attente</div>
-        </div>
-        <div className="stat-box">
-          <div className="stat-chiffre">{stats.traites}</div>
-          <div className="stat-label">Réussis</div>
-        </div>
-        <div className="stat-box">
-          <div className="stat-chiffre">{stats.echecs}</div>
-          <div className="stat-label">Échecs</div>
+    <>
+      <div className="card">
+        <div className="stats-grid">
+          <div className="stat-box">
+            <div className="stat-chiffre">{stats.totalContacts}</div>
+            <div className="stat-label">Total appels traités</div>
+          </div>
+          <div className="stat-box">
+            <div className="stat-chiffre">{stats.aRappeler}</div>
+            <div className="stat-label">En attente (à rappeler)</div>
+          </div>
+          <div className="stat-box">
+            <div className="stat-chiffre">{stats.traites}</div>
+            <div className="stat-label">Réussis</div>
+          </div>
+          <div className="stat-box">
+            <div className="stat-chiffre">{stats.echecsDefinitifs}</div>
+            <div className="stat-label">Échecs définitifs</div>
+          </div>
         </div>
       </div>
+
+      <div className="card" style={{ marginTop: 16 }}>
+        <TopAgents tousLesContacts={tousLesContacts} />
+      </div>
+
+      <div className="card" style={{ marginTop: 16 }}>
+        <TopHeures tousLesContacts={tousLesContacts} />
+      </div>
+    </>
+  )
+}
+
+function TopAgents({ tousLesContacts }) {
+  const classement = useMemo(() => {
+    const maintenant = new Date()
+    const moisActuel = maintenant.getMonth()
+    const anneeActuelle = maintenant.getFullYear()
+
+    const compteurs = {}
+    tousLesContacts.forEach((c) => {
+      if (c.statut !== 'traite' || !c.dateTraite) return
+      const d = new Date(c.dateTraite)
+      if (d.getMonth() !== moisActuel || d.getFullYear() !== anneeActuelle) return
+      compteurs[c.agentUid] = (compteurs[c.agentUid] || 0) + 1
+    })
+
+    return Object.entries(compteurs)
+      .map(([uid, count]) => ({ uid, nom: AGENTS[uid] || uid, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3)
+  }, [tousLesContacts])
+
+  const nomsMois = [
+    'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+    'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
+  ]
+  const moisLabel = nomsMois[new Date().getMonth()]
+
+  return (
+    <div>
+      <h3>🏆 Top 3 agents — {moisLabel}</h3>
+      {classement.length === 0 && <p className="hint">Aucune réussite enregistrée ce mois-ci.</p>}
+      {classement.map((a, idx) => (
+        <div key={a.uid} className="classement-row">
+          <span className="classement-rang">{idx + 1}</span>
+          <span className="classement-nom">{a.nom}</span>
+          <span className="classement-score">{a.count} réussites</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function TopHeures({ tousLesContacts }) {
+  const heures = useMemo(() => {
+    const parHeure = {}
+    tousLesContacts.forEach((c) => {
+      if (c.heureAppel === undefined || c.heureAppel === null) return
+      if (c.statut !== 'traite' && c.statut !== 'echec') return
+      const h = c.heureAppel
+      if (!parHeure[h]) parHeure[h] = { succes: 0, total: 0 }
+      parHeure[h].total++
+      if (c.statut === 'traite') parHeure[h].succes++
+    })
+
+    return Object.entries(parHeure)
+      .filter(([, v]) => v.total >= 3)
+      .map(([h, v]) => ({ heure: h, taux: Math.round((v.succes / v.total) * 100) }))
+      .sort((a, b) => b.taux - a.taux)
+      .slice(0, 3)
+  }, [tousLesContacts])
+
+  return (
+    <div>
+      <h3>⏰ Meilleurs horaires d'appel</h3>
+      <p className="hint">Basé sur le taux de réussite (minimum 3 appels par heure)</p>
+      {heures.length === 0 && <p className="hint">Pas encore assez de données.</p>}
+      {heures.map((h) => (
+        <div key={h.heure} className="heure-row">
+          <span className="heure-taux">{h.taux}%</span>
+          <div className="heure-barre-fond">
+            <div className="heure-barre" style={{ width: `${h.taux}%` }} />
+          </div>
+          <span className="heure-label">{h.heure.padStart(2, '0')}:00</span>
+        </div>
+      ))}
     </div>
   )
 }
 
 function ListesPanel() {
   const [apercu, setApercu] = useState([])
+  const [colonnesDetectees, setColonnesDetectees] = useState([])
   const [agentChoisi, setAgentChoisi] = useState('')
   const [statut, setStatut] = useState('')
 
@@ -133,6 +254,8 @@ function ListesPanel() {
       const feuille = wb.Sheets[wb.SheetNames[0]]
       const lignes = XLSX.utils.sheet_to_json(feuille, { defval: '' })
       setApercu(lignes)
+      setColonnesDetectees(lignes.length > 0 ? Object.keys(lignes[0]) : [])
+      setStatut('')
     }
     reader.readAsBinaryString(f)
   }
@@ -149,8 +272,10 @@ function ListesPanel() {
     setStatut('Import en cours...')
     const updates = {}
     apercu.forEach((ligne, idx) => {
-      const nom = ligne.Nom || ligne.nom || ligne.NOM || ''
-      const telephone = String(ligne.Telephone || ligne.téléphone || ligne.Téléphone || ligne.telephone || '')
+      const nom = extraireValeur(ligne, ['nom', 'name', 'الاسم', 'nom complet'])
+      const telephone = String(
+        extraireValeur(ligne, ['telephone', 'téléphone', 'tel', 'phone', 'الهاتف', 'رقم الهاتف']),
+      )
       if (!nom && !telephone) return
       const id = `id_${Date.now()}_${idx}`
       updates[`calllists_by_agent/${agentChoisi}/${id}`] = {
@@ -163,13 +288,18 @@ function ListesPanel() {
     await update(ref(db, 'meta'), { calllistsUpdatedAt: Date.now() })
     setStatut(`${Object.keys(updates).length} contacts importés et assignés avec succès.`)
     setApercu([])
+    setColonnesDetectees([])
   }
 
   return (
     <div className="card">
       <h3>Importer une liste (fichier Excel)</h3>
-      <p className="hint">Colonnes attendues : Nom, Telephone</p>
+      <p className="hint">Colonnes attendues : Nom, Telephone (variantes acceptées)</p>
       <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFichier} />
+
+      {colonnesDetectees.length > 0 && (
+        <p className="hint">Colonnes trouvées dans le fichier : {colonnesDetectees.join(', ')}</p>
+      )}
 
       {apercu.length > 0 && (
         <>
