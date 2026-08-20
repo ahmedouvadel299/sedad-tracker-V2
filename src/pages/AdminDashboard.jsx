@@ -5,7 +5,7 @@ import { ref, onValue, update, get } from 'firebase/database'
 import * as XLSX from 'xlsx'
 import { db, auth } from '../firebase.js'
 import RapportsPanel from './RapportsPanel.jsx'
-import LogoIcon from './logo.js'
+import LogoIcon from './logo.jsx'
 
 const AGENTS = {
   Nh768OOap7W0VxDs6u7dxER0WbP2: 'Fatimetou ebloul',
