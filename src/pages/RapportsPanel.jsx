@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { LOGO_BASE64 } from './logo.js'
 
 const NOM_ADMIN_SIGNATURE = 'Sellem brahim'
 const TITRE_ADMIN_SIGNATURE = 'Responsable de centre — contact'
@@ -136,17 +135,12 @@ function RapportsPanel({ toutesLesListes, agents }) {
   const totalEchecs = contactsFiltres.filter((c) => c.statut === 'echec').length
 
   function enTeteDocument(doc) {
-    try {
-      doc.addImage(LOGO_BASE64, 'PNG', 14, 8, 18, 18)
-    } catch (e) {
-      // logo optionnel — le rapport continue sans lui en cas d'erreur
-    }
     doc.setFontSize(16)
     doc.setFont(undefined, 'bold')
-    doc.text('Registre SEDAD', 36, 16)
+    doc.text('Registre SEDAD', 14, 16)
     doc.setFontSize(10)
     doc.setFont(undefined, 'normal')
-    doc.text(BANQUE, 36, 23)
+    doc.text(BANQUE, 14, 23)
     doc.setFontSize(11)
     doc.text(TYPES_RAPPORT.find((t) => t.valeur === type)?.label || '', 14, 34)
     doc.setFontSize(9)
