@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
-import { ref, onValue, update } from 'firebase/database'
+import { ref, onValue, update, get } from 'firebase/database'
 import * as XLSX from 'xlsx'
 import { db, auth } from '../firebase.js'
+import RapportsPanel from './RapportsPanel.jsx'
+import { LOGO_BASE64 } from './logo.js'
 
 const AGENTS = {
   Nh768OOap7W0VxDs6u7dxER0WbP2: 'Fatimetou ebloul',
@@ -39,6 +41,8 @@ function AdminDashboard() {
   const navigate = useNavigate()
   const [onglet, setOnglet] = useState('listes')
   const [toutesLesListes, setToutesLesListes] = useState({})
+  const [derniereMaj, setDerniereMaj] = useState(Date.now())
+  const [actualisation, setActualisation] = useState(false)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -51,9 +55,21 @@ function AdminDashboard() {
     const listesRef = ref(db, 'calllists_by_agent')
     const unsub = onValue(listesRef, (snap) => {
       setToutesLesListes(snap.val() || {})
+      setDerniereMaj(Date.now())
     })
     return () => unsub()
   }, [])
+
+  async function actualiserManuel() {
+    setActualisation(true)
+    try {
+      const snap = await get(ref(db, 'calllists_by_agent'))
+      setToutesLesListes(snap.val() || {})
+      setDerniereMaj(Date.now())
+    } finally {
+      setActualisation(false)
+    }
+  }
 
   async function deconnexion() {
     await signOut(auth)
@@ -66,10 +82,21 @@ function AdminDashboard() {
         <button className="btn-deconnexion" onClick={deconnexion}>
           Déconnexion
         </button>
-        <div className="agent-header-nom">Administration</div>
-        <div className="agent-header-titre">
-          Registre SEDAD
-          <div className="agent-header-banque">البنك الموريتاني للاستثمار</div>
+        <div>
+          <div className="agent-header-nom">Administration</div>
+          <button className="btn-actualiser" onClick={actualiserManuel} disabled={actualisation}>
+            {actualisation ? 'Actualisation...' : '🔄 Actualiser'}
+          </button>
+          <div className="derniere-maj">
+            Mis à jour : {new Date(derniereMaj).toLocaleTimeString('fr-FR')}
+          </div>
+        </div>
+        <div className="agent-header-titre-wrapper">
+          <div className="agent-header-titre">
+            Registre SEDAD
+            <div className="agent-header-banque">البنك الموريتاني للاستثمار</div>
+          </div>
+          <img src={LOGO_BASE64} alt="Sedad" className="agent-header-logo" />
         </div>
       </header>
 
@@ -91,7 +118,7 @@ function AdminDashboard() {
       {onglet === 'vue' && <VueEnsemble toutesLesListes={toutesLesListes} />}
       {onglet === 'listes' && <ListesPanel />}
       {onglet === 'equipe' && <EquipePanel toutesLesListes={toutesLesListes} />}
-      {onglet === 'rapports' && <RapportsPanel toutesLesListes={toutesLesListes} />}
+      {onglet === 'rapports' && <RapportsPanel toutesLesListes={toutesLesListes} agents={AGENTS} />}
     </div>
   )
 }
@@ -368,36 +395,6 @@ function EquipePanel({ toutesLesListes }) {
           )}
         </div>
       ))}
-    </div>
-  )
-}
-
-function RapportsPanel({ toutesLesListes }) {
-  function exporterCSV() {
-    const lignes = [['Agent', 'Nom', 'Téléphone', 'Statut', 'Raison', 'Durée (sec)']]
-    Object.entries(toutesLesListes).forEach(([uid, contacts]) => {
-      const nomAgent = AGENTS[uid] || uid
-      Object.values(contacts || {}).forEach((c) => {
-        lignes.push([nomAgent, c.nom || '', c.telephone || '', c.statut || '', c.raison || '', c.dureeAppelSec || ''])
-      })
-    })
-    const csv = lignes.map((l) => l.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `rapport-sedad-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  return (
-    <div className="card">
-      <h3>Exporter un rapport</h3>
-      <p className="hint">Exporte tous les contacts de tous les agents au format Excel (CSV).</p>
-      <button className="btn-primaire" onClick={exporterCSV}>
-        Exporter en CSV
-      </button>
     </div>
   )
 }
