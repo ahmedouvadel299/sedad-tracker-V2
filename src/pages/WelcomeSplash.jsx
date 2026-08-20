@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { LOGO_BASE64 } from './logo.js'
+import LogoIcon from './logo.js'
 
 const PHRASES = [
   "Votre régularité fait la force de l'équipe.",
@@ -41,7 +41,7 @@ function WelcomeSplash() {
     <div className="splash">
       <div className="splash-badge">
         <div className="splash-badge-inner">
-          <img src={LOGO_BASE64} alt="Sedad" width="56" height="56" />
+          <LogoIcon size={56} />
         </div>
       </div>
 
