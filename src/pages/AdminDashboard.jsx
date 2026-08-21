@@ -6,6 +6,20 @@ import * as XLSX from 'xlsx'
 import { db, auth } from '../firebase.js'
 import RapportsPanel from './RapportsPanel.jsx'
 import LogoIcon from './logo.jsx'
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from 'recharts'
 
 const AGENTS = {
   Nh768OOap7W0VxDs6u7dxER0WbP2: 'Fatimetou ebloul',
@@ -22,6 +36,9 @@ const AGENTS = {
 }
 
 const RAISONS_RETRY = ['Injoignable', 'En cours']
+const COULEUR_OR = '#c9a24b'
+const COULEUR_MENTHE = '#7fd9a8'
+const COULEUR_ROUGE = '#e0a1a1'
 
 function normaliserCle(cle) {
   return cle.toString().trim().toLowerCase()
@@ -154,27 +171,155 @@ function VueEnsemble({ toutesLesListes }) {
     }
   }, [tousLesContacts])
 
+  const donneesParAgent = useMemo(() => {
+    return Object.entries(AGENTS).map(([uid, nom]) => {
+      const contacts = tousLesContacts.filter((c) => c.agentUid === uid)
+      const traites = contacts.filter((c) => c.statut === 'traite').length
+      const echecs = contacts.filter((c) => c.statut === 'echec').length
+      return { nom: nom.split(' ')[0], nomComplet: nom, Réussis: traites, Échecs: echecs }
+    })
+  }, [tousLesContacts])
+
+  const donneesRepartition = useMemo(
+    () => [
+      { name: 'Réussis', value: stats.traites, color: COULEUR_MENTHE },
+      { name: 'À rappeler', value: stats.aRappeler, color: COULEUR_OR },
+      { name: 'Échecs définitifs', value: stats.echecsDefinitifs, color: COULEUR_ROUGE },
+      { name: 'Non appelés', value: stats.nonAppeles, color: '#5c7a4a' },
+    ],
+    [stats],
+  )
+
+  const tendance14Jours = useMemo(() => {
+    const jours = []
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      d.setHours(0, 0, 0, 0)
+      jours.push({ date: d, label: d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }), reussis: 0, echecs: 0 })
+    }
+    tousLesContacts.forEach((c) => {
+      if (!c.dateTraite) return
+      const d = new Date(c.dateTraite)
+      d.setHours(0, 0, 0, 0)
+      const jour = jours.find((j) => j.date.getTime() === d.getTime())
+      if (!jour) return
+      if (c.statut === 'traite') jour.reussis++
+      else if (c.statut === 'echec') jour.echecs++
+    })
+    return jours
+  }, [tousLesContacts])
+
   return (
     <>
       <div className="card">
         <div className="stats-grid">
-          <div className="stat-box">
+          <div className="stat-box stat-box-3d stat-gold">
             <div className="stat-chiffre">{stats.totalContacts}</div>
             <div className="stat-label">Total appels traités</div>
           </div>
-          <div className="stat-box">
+          <div className="stat-box stat-box-3d stat-gold">
             <div className="stat-chiffre">{stats.aRappeler}</div>
             <div className="stat-label">En attente (à rappeler)</div>
           </div>
-          <div className="stat-box">
+          <div className="stat-box stat-box-3d stat-mint">
             <div className="stat-chiffre">{stats.traites}</div>
             <div className="stat-label">Réussis</div>
           </div>
-          <div className="stat-box">
+          <div className="stat-box stat-box-3d stat-rouge">
             <div className="stat-chiffre">{stats.echecsDefinitifs}</div>
             <div className="stat-label">Échecs définitifs</div>
           </div>
         </div>
+      </div>
+
+      <div className="card chart-card" style={{ marginTop: 16 }}>
+        <h3>Répartition globale des contacts</h3>
+        <ResponsiveContainer width="100%" height={260}>
+          <PieChart>
+            <defs>
+              <filter id="ombre3dAdmin" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="2" dy="4" stdDeviation="3" floodColor="#000" floodOpacity="0.35" />
+              </filter>
+              {donneesRepartition.map((d, i) => (
+                <linearGradient id={`gradAdmin-${i}`} key={i} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={d.color} stopOpacity={1} />
+                  <stop offset="100%" stopColor={d.color} stopOpacity={0.55} />
+                </linearGradient>
+              ))}
+            </defs>
+            <Pie
+              data={donneesRepartition}
+              dataKey="value"
+              nameKey="name"
+              innerRadius={55}
+              outerRadius={95}
+              paddingAngle={3}
+              filter="url(#ombre3dAdmin)"
+              label={({ name, value }) => (value > 0 ? `${name}: ${value}` : '')}
+              labelLine={false}
+            >
+              {donneesRepartition.map((d, i) => (
+                <Cell key={i} fill={`url(#gradAdmin-${i})`} stroke="#16241a" strokeWidth={2} />
+              ))}
+            </Pie>
+            <Tooltip contentStyle={{ background: '#16241a', border: '1px solid #c9a24b', borderRadius: 8 }} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="card chart-card" style={{ marginTop: 16 }}>
+        <h3>Performance par agent</h3>
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={donneesParAgent} margin={{ top: 10, right: 10, left: -20, bottom: 40 }}>
+            <defs>
+              <linearGradient id="gradReussiAdmin" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={COULEUR_MENTHE} stopOpacity={1} />
+                <stop offset="100%" stopColor={COULEUR_MENTHE} stopOpacity={0.4} />
+              </linearGradient>
+              <linearGradient id="gradEchecAdmin" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={COULEUR_ROUGE} stopOpacity={1} />
+                <stop offset="100%" stopColor={COULEUR_ROUGE} stopOpacity={0.4} />
+              </linearGradient>
+              <filter id="ombreBarreAdmin" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="1" dy="3" stdDeviation="2" floodColor="#000" floodOpacity="0.4" />
+              </filter>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#3a4f2f" />
+            <XAxis dataKey="nom" angle={-40} textAnchor="end" tick={{ fill: '#cdd6c4', fontSize: 11 }} interval={0} />
+            <YAxis tick={{ fill: '#cdd6c4', fontSize: 11 }} />
+            <Tooltip
+              contentStyle={{ background: '#16241a', border: '1px solid #c9a24b', borderRadius: 8 }}
+              labelFormatter={(label, payload) => payload?.[0]?.payload?.nomComplet || label}
+            />
+            <Bar dataKey="Réussis" fill="url(#gradReussiAdmin)" filter="url(#ombreBarreAdmin)" radius={[6, 6, 0, 0]} />
+            <Bar dataKey="Échecs" fill="url(#gradEchecAdmin)" filter="url(#ombreBarreAdmin)" radius={[6, 6, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="card chart-card" style={{ marginTop: 16 }}>
+        <h3>Tendance des 14 derniers jours</h3>
+        <ResponsiveContainer width="100%" height={240}>
+          <AreaChart data={tendance14Jours} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <defs>
+              <linearGradient id="gradAireReussiAdmin" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={COULEUR_MENTHE} stopOpacity={0.8} />
+                <stop offset="95%" stopColor={COULEUR_MENTHE} stopOpacity={0.05} />
+              </linearGradient>
+              <linearGradient id="gradAireEchecAdmin" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={COULEUR_ROUGE} stopOpacity={0.7} />
+                <stop offset="95%" stopColor={COULEUR_ROUGE} stopOpacity={0.05} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#3a4f2f" />
+            <XAxis dataKey="label" tick={{ fill: '#cdd6c4', fontSize: 10 }} />
+            <YAxis tick={{ fill: '#cdd6c4', fontSize: 11 }} />
+            <Tooltip contentStyle={{ background: '#16241a', border: '1px solid #c9a24b', borderRadius: 8 }} />
+            <Area type="monotone" dataKey="reussis" name="Réussis" stroke={COULEUR_MENTHE} fill="url(#gradAireReussiAdmin)" strokeWidth={2} />
+            <Area type="monotone" dataKey="echecs" name="Échecs" stroke={COULEUR_ROUGE} fill="url(#gradAireEchecAdmin)" strokeWidth={2} />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
