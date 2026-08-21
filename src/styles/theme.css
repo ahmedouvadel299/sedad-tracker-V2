@@ -751,3 +751,56 @@ h1 {
   font-size: 11px;
   color: #9fae93;
 }
+/* Observer dashboard */
+.observer-page {
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.observer-badge {
+  border: 1px solid var(--mint);
+  color: var(--mint);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 12px;
+  align-self: flex-start;
+}
+
+.observer-titre {
+  color: var(--cream);
+  font-family: Georgia, serif;
+  margin: 4px 0 16px;
+}
+
+.observer-stats-grid {
+  margin-bottom: 16px;
+}
+
+.stat-box-3d {
+  position: relative;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.stat-box.stat-gold {
+  border-color: var(--gold);
+  background: linear-gradient(145deg, rgba(201, 162, 75, 0.18), rgba(201, 162, 75, 0.03));
+}
+
+.stat-box.stat-mint {
+  border-color: var(--mint);
+  background: linear-gradient(145deg, rgba(127, 217, 168, 0.18), rgba(127, 217, 168, 0.03));
+}
+
+.stat-box.stat-rouge {
+  border-color: var(--danger);
+  background: linear-gradient(145deg, rgba(224, 161, 161, 0.18), rgba(224, 161, 161, 0.03));
+}
+
+.chart-card h3 {
+  margin-top: 0;
+  color: var(--cream);
+}
+
+.observer-agent-row {
+  justify-content: space-between;
+}
