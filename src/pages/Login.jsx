@@ -23,19 +23,35 @@ function Login() {
   const [verificationSession, setVerificationSession] = useState(true)
 
   useEffect(() => {
+    let termine = false
+
+    const delaiSecurite = setTimeout(() => {
+      if (!termine) {
+        termine = true
+        setVerificationSession(false)
+      }
+    }, 6000)
+
     const unsub = onAuthStateChanged(auth, async (user) => {
+      if (termine) return
       if (!user) {
+        termine = true
+        clearTimeout(delaiSecurite)
         setVerificationSession(false)
         return
       }
       try {
         const snap = await get(ref(db, `roles/${user.uid}`))
+        if (termine) return
         const role = snap.exists() ? snap.val() : null
         const nomAffiche = user.email ? user.email.split('@')[0] : 'Utilisateur'
         let destination = null
         if (role === 'admin') destination = '/admin'
         else if (role === 'observer') destination = '/observateur'
         else if (role === 'agent') destination = '/agent'
+
+        termine = true
+        clearTimeout(delaiSecurite)
 
         if (destination) {
           sessionStorage.setItem('sedad_splash', JSON.stringify({ nom: nomAffiche, destination }))
@@ -44,10 +60,17 @@ function Login() {
           setVerificationSession(false)
         }
       } catch {
-        setVerificationSession(false)
+        if (!termine) {
+          termine = true
+          clearTimeout(delaiSecurite)
+          setVerificationSession(false)
+        }
       }
     })
-    return () => unsub()
+    return () => {
+      clearTimeout(delaiSecurite)
+      unsub()
+    }
   }, [navigate])
 
   async function allerVersSplash(uid, nomAffiche) {
