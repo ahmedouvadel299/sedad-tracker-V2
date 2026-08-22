@@ -22,6 +22,7 @@ const DEFAUT = {
   seuilDureeAnormaleMin: 15,
   nomSignature: 'Sellem brahim',
   titreSignature: 'Responsable de centre — contact',
+  nomDirecteur: '',
   delaiRappelJours: 14,
 }
 
@@ -58,6 +59,7 @@ function Parametres() {
       seuilDureeAnormaleMin: Number(parametres.seuilDureeAnormaleMin) || DEFAUT.seuilDureeAnormaleMin,
       nomSignature: parametres.nomSignature || DEFAUT.nomSignature,
       titreSignature: parametres.titreSignature || DEFAUT.titreSignature,
+      nomDirecteur: parametres.nomDirecteur || '',
       delaiRappelJours: Number(parametres.delaiRappelJours) || DEFAUT.delaiRappelJours,
       objectifsParAgent,
     })
@@ -146,6 +148,16 @@ function Parametres() {
             type="text"
             value={parametres.titreSignature}
             onChange={(e) => majChamp('titreSignature', e.target.value)}
+          />
+        </label>
+
+        <label className="select-label">
+          Nom du Directeur SEDAD (deuxième signature, optionnel)
+          <input
+            type="text"
+            value={parametres.nomDirecteur}
+            onChange={(e) => majChamp('nomDirecteur', e.target.value)}
+            placeholder="Laisser vide pour une ligne à signer manuellement"
           />
         </label>
       </div>
