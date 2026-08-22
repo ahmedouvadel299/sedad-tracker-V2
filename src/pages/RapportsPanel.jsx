@@ -41,9 +41,41 @@ function formatDureeSec(sec) {
   return `${min}min ${s}s`
 }
 
+const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
+  <rect x="1" y="1" width="98" height="98" rx="22" fill="#ffffff" stroke="#e5e0d5" />
+  <g>
+    <rect x="24" y="26" width="24" height="40" rx="5" fill="#9c7a2e" transform="rotate(-14 36 46)" />
+    <rect x="32" y="24" width="24" height="40" rx="5" fill="#c39a3f" transform="rotate(-3 44 44)" />
+    <rect x="40" y="23" width="24" height="40" rx="5" fill="#dcbb5c" transform="rotate(8 52 43)" />
+    <path d="M28 52 L44 68 L70 34" stroke="#8a6a24" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+    <path d="M70 34 L82 20 L74 38 Z" fill="#8a6a24" />
+  </g>
+</svg>`
+
+function rasteriserLogo() {
+  return new Promise((resolve) => {
+    const img = new Image()
+    const blob = new Blob([LOGO_SVG], { type: 'image/svg+xml;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = 100
+      canvas.height = 100
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, 100, 100)
+      const dataUrl = canvas.toDataURL('image/png')
+      URL.revokeObjectURL(url)
+      resolve(dataUrl)
+    }
+    img.onerror = () => resolve(null)
+    img.src = url
+  })
+}
+
 function RapportsPanel({ toutesLesListes, agents, settings = {} }) {
   const nomSignature = settings.nomSignature || 'Sellem brahim'
   const titreSignature = settings.titreSignature || 'Responsable de centre — contact'
+  const nomDirecteur = settings.nomDirecteur || ''
   const [type, setType] = useState('mensuel')
   const [dateJournaliere, setDateJournaliere] = useState(new Date().toISOString().slice(0, 10))
   const [dateDebut, setDateDebut] = useState(new Date().toISOString().slice(0, 10))
@@ -134,13 +166,21 @@ function RapportsPanel({ toutesLesListes, agents, settings = {} }) {
   const totalReussis = contactsFiltres.filter((c) => c.statut === 'traite').length
   const totalEchecs = contactsFiltres.filter((c) => c.statut === 'echec').length
 
-  function enTeteDocument(doc) {
+  function enTeteDocument(doc, logoData) {
+    if (logoData) {
+      try {
+        doc.addImage(logoData, 'PNG', 14, 8, 18, 18)
+      } catch (e) {
+        // le rapport continue sans logo en cas d'erreur
+      }
+    }
+    const decalageX = logoData ? 36 : 14
     doc.setFontSize(16)
     doc.setFont(undefined, 'bold')
-    doc.text('Registre SEDAD', 14, 16)
+    doc.text('Registre SEDAD', decalageX, 16)
     doc.setFontSize(10)
     doc.setFont(undefined, 'normal')
-    doc.text(BANQUE, 14, 23)
+    doc.text(BANQUE, decalageX, 23)
     doc.setFontSize(11)
     doc.text(TYPES_RAPPORT.find((t) => t.valeur === type)?.label || '', 14, 34)
     doc.setFontSize(9)
@@ -150,15 +190,22 @@ function RapportsPanel({ toutesLesListes, agents, settings = {} }) {
 
   function piedDocument(doc) {
     const pageHeight = doc.internal.pageSize.height
+    const pageWidth = doc.internal.pageSize.width
     doc.setFontSize(9)
+
     doc.text('Signature :', 14, pageHeight - 25)
     doc.text(nomSignature, 14, pageHeight - 19)
     doc.text(titreSignature, 14, pageHeight - 14)
+
+    doc.text('Signature :', pageWidth - 80, pageHeight - 25)
+    doc.text(nomDirecteur || '________________', pageWidth - 80, pageHeight - 19)
+    doc.text('Directeur SEDAD', pageWidth - 80, pageHeight - 14)
   }
 
-  function exporterPDF() {
+  async function exporterPDF() {
     const doc = new jsPDF()
-    enTeteDocument(doc)
+    const logoData = await rasteriserLogo()
+    enTeteDocument(doc, logoData)
 
     autoTable(doc, {
       startY: 50,
