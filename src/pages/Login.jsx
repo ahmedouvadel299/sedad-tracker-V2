@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { signInWithEmailAndPassword } from 'firebase/auth'
+import { onAuthStateChanged, signInWithEmailAndPassword } from 'firebase/auth'
 import { ref, get } from 'firebase/database'
 import { auth, db } from '../firebase.js'
+import LogoIcon from './logo.jsx'
 
 function agentCredentials(nom, pin) {
   const email = `${nom.trim().toLowerCase().replace(/\s+/g, '')}@sedad.local`
@@ -19,6 +20,35 @@ function Login() {
   const [password, setPassword] = useState('')
   const [erreur, setErreur] = useState('')
   const [chargement, setChargement] = useState(false)
+  const [verificationSession, setVerificationSession] = useState(true)
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setVerificationSession(false)
+        return
+      }
+      try {
+        const snap = await get(ref(db, `roles/${user.uid}`))
+        const role = snap.exists() ? snap.val() : null
+        const nomAffiche = user.email ? user.email.split('@')[0] : 'Utilisateur'
+        let destination = null
+        if (role === 'admin') destination = '/admin'
+        else if (role === 'observer') destination = '/observateur'
+        else if (role === 'agent') destination = '/agent'
+
+        if (destination) {
+          sessionStorage.setItem('sedad_splash', JSON.stringify({ nom: nomAffiche, destination }))
+          navigate('/bienvenue', { replace: true })
+        } else {
+          setVerificationSession(false)
+        }
+      } catch {
+        setVerificationSession(false)
+      }
+    })
+    return () => unsub()
+  }, [navigate])
 
   async function allerVersSplash(uid, nomAffiche) {
     const snap = await get(ref(db, `roles/${uid}`))
@@ -67,8 +97,23 @@ function Login() {
     }
   }
 
+  if (verificationSession) {
+    return (
+      <div className="page login-page">
+        <div className="login-logo-wrapper">
+          <LogoIcon size={64} />
+        </div>
+        <h1>Registre SEDAD</h1>
+        <p className="hint">Vérification de la session…</p>
+      </div>
+    )
+  }
+
   return (
     <div className="page login-page">
+      <div className="login-logo-wrapper">
+        <LogoIcon size={64} />
+      </div>
       <h1>Registre SEDAD</h1>
 
       <div className="login-tabs">
