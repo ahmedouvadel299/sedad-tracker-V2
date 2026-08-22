@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { logoSvgMarkup } from './logo.jsx'
 
 const BANQUE = 'Banque Mauritanienne pour l\'Investissement'
 
@@ -41,21 +42,10 @@ function formatDureeSec(sec) {
   return `${min}min ${s}s`
 }
 
-const LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100">
-  <rect x="1" y="1" width="98" height="98" rx="22" fill="#ffffff" stroke="#e5e0d5" />
-  <g>
-    <rect x="24" y="26" width="24" height="40" rx="5" fill="#9c7a2e" transform="rotate(-14 36 46)" />
-    <rect x="32" y="24" width="24" height="40" rx="5" fill="#c39a3f" transform="rotate(-3 44 44)" />
-    <rect x="40" y="23" width="24" height="40" rx="5" fill="#dcbb5c" transform="rotate(8 52 43)" />
-    <path d="M28 52 L44 68 L70 34" stroke="#8a6a24" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none" />
-    <path d="M70 34 L82 20 L74 38 Z" fill="#8a6a24" />
-  </g>
-</svg>`
-
 function rasteriserLogo() {
   return new Promise((resolve) => {
     const img = new Image()
-    const blob = new Blob([LOGO_SVG], { type: 'image/svg+xml;charset=utf-8' })
+    const blob = new Blob([logoSvgMarkup(100)], { type: 'image/svg+xml;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     img.onload = () => {
       const canvas = document.createElement('canvas')
