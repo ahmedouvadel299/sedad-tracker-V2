@@ -18,6 +18,7 @@ const RAISONS_SUCCES = [
   "Le client n'a pas connaissance de son compte",
 ]
 const SEUIL_DUREE_ANORMALE = 15 * 60 * 1000
+const RAISONS_RETRY = ['Injoignable', 'En cours']
 
 function formatDuree(ms) {
   const totalSec = Math.floor(ms / 1000)
@@ -84,9 +85,22 @@ function AgentDashboard() {
     return Object.entries(contacts).map(([id, c]) => ({ id, ...c }))
   }, [contacts])
 
-  const maListe = listeContacts.filter((c) => c.statut === 'en_attente' && !c.archive)
+  const delaiRappelMs = (Number(settings.delaiRappelJours) || 14) * 24 * 60 * 60 * 1000
+
+  function estEnDelaiRappel(c) {
+    if (!c.dateTraite) return true
+    return Date.now() - c.dateTraite < delaiRappelMs
+  }
+
+  const maListe = listeContacts.filter((c) => {
+    if (c.archive) return false
+    if (c.statut === 'en_attente') return true
+    if (c.statut === 'echec' && RAISONS_RETRY.includes(c.raison) && !estEnDelaiRappel(c)) return true
+    return false
+  })
+
   const listeAttente = listeContacts.filter(
-    (c) => c.statut === 'echec' && (c.raison === 'Injoignable' || c.raison === 'En cours'),
+    (c) => c.statut === 'echec' && RAISONS_RETRY.includes(c.raison) && estEnDelaiRappel(c) && !c.archive,
   )
 
   const listeAffichee = onglet === 'maListe' ? maListe : listeAttente
