@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { logoSvgMarkup } from './logo.jsx'
+import { LOGO_DATA_URL } from './logo.jsx'
 
 const BANQUE = 'Banque Mauritanienne pour l\'Investissement'
 
@@ -40,26 +40,6 @@ function formatDureeSec(sec) {
   const min = Math.floor(sec / 60)
   const s = sec % 60
   return `${min}min ${s}s`
-}
-
-function rasteriserLogo() {
-  return new Promise((resolve) => {
-    const img = new Image()
-    const blob = new Blob([logoSvgMarkup(100)], { type: 'image/svg+xml;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    img.onload = () => {
-      const canvas = document.createElement('canvas')
-      canvas.width = 100
-      canvas.height = 100
-      const ctx = canvas.getContext('2d')
-      ctx.drawImage(img, 0, 0, 100, 100)
-      const dataUrl = canvas.toDataURL('image/png')
-      URL.revokeObjectURL(url)
-      resolve(dataUrl)
-    }
-    img.onerror = () => resolve(null)
-    img.src = url
-  })
 }
 
 function RapportsPanel({ toutesLesListes, agents, settings = {} }) {
@@ -156,15 +136,13 @@ function RapportsPanel({ toutesLesListes, agents, settings = {} }) {
   const totalReussis = contactsFiltres.filter((c) => c.statut === 'traite').length
   const totalEchecs = contactsFiltres.filter((c) => c.statut === 'echec').length
 
-  function enTeteDocument(doc, logoData) {
-    if (logoData) {
-      try {
-        doc.addImage(logoData, 'PNG', 14, 8, 18, 18)
-      } catch (e) {
-        // le rapport continue sans logo en cas d'erreur
-      }
+  function enTeteDocument(doc) {
+    try {
+      doc.addImage(LOGO_DATA_URL, 'PNG', 14, 8, 18, 18)
+    } catch (e) {
+      // le rapport continue sans logo en cas d'erreur
     }
-    const decalageX = logoData ? 36 : 14
+    const decalageX = 36
     doc.setFontSize(16)
     doc.setFont(undefined, 'bold')
     doc.text('Registre SEDAD', decalageX, 16)
@@ -192,10 +170,9 @@ function RapportsPanel({ toutesLesListes, agents, settings = {} }) {
     doc.text('Directeur SEDAD', pageWidth - 80, pageHeight - 14)
   }
 
-  async function exporterPDF() {
+  function exporterPDF() {
     const doc = new jsPDF()
-    const logoData = await rasteriserLogo()
-    enTeteDocument(doc, logoData)
+    enTeteDocument(doc)
 
     autoTable(doc, {
       startY: 50,
