@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
-import { ref, onValue, update, get } from 'firebase/database'
+import { ref, onValue, update, get, remove } from 'firebase/database'
 import * as XLSX from 'xlsx'
 import { db, auth } from '../firebase.js'
 import RapportsPanel from './RapportsPanel.jsx'
+import Parametres from './Parametres.jsx'
 import LogoIcon from './logo.jsx'
 import {
   ResponsiveContainer,
@@ -60,6 +61,7 @@ function AdminDashboard() {
   const [toutesLesListes, setToutesLesListes] = useState({})
   const [derniereMaj, setDerniereMaj] = useState(Date.now())
   const [actualisation, setActualisation] = useState(false)
+  const [settings, setSettings] = useState({})
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -73,6 +75,14 @@ function AdminDashboard() {
     const unsub = onValue(listesRef, (snap) => {
       setToutesLesListes(snap.val() || {})
       setDerniereMaj(Date.now())
+    })
+    return () => unsub()
+  }, [])
+
+  useEffect(() => {
+    const settingsRef = ref(db, 'settings')
+    const unsub = onValue(settingsRef, (snap) => {
+      setSettings(snap.val() || {})
     })
     return () => unsub()
   }, [])
@@ -130,12 +140,18 @@ function AdminDashboard() {
         <button className={onglet === 'rapports' ? 'active' : ''} onClick={() => setOnglet('rapports')}>
           Rapports
         </button>
+        <button className={onglet === 'parametres' ? 'active' : ''} onClick={() => setOnglet('parametres')}>
+          Paramètres
+        </button>
       </nav>
 
       {onglet === 'vue' && <VueEnsemble toutesLesListes={toutesLesListes} />}
-      {onglet === 'listes' && <ListesPanel />}
+      {onglet === 'listes' && <ListesPanel toutesLesListes={toutesLesListes} />}
       {onglet === 'equipe' && <EquipePanel toutesLesListes={toutesLesListes} />}
-      {onglet === 'rapports' && <RapportsPanel toutesLesListes={toutesLesListes} agents={AGENTS} />}
+      {onglet === 'rapports' && (
+        <RapportsPanel toutesLesListes={toutesLesListes} agents={AGENTS} settings={settings} />
+      )}
+      {onglet === 'parametres' && <Parametres />}
     </div>
   )
 }
@@ -411,10 +427,11 @@ function TopHeures({ tousLesContacts }) {
   )
 }
 
-function ListesPanel() {
+function ListesPanel({ toutesLesListes }) {
   const [apercu, setApercu] = useState([])
   const [colonnesDetectees, setColonnesDetectees] = useState([])
   const [agentChoisi, setAgentChoisi] = useState('')
+  const [nomLot, setNomLot] = useState('')
   const [statut, setStatut] = useState('')
 
   function handleFichier(e) {
@@ -428,6 +445,9 @@ function ListesPanel() {
       setApercu(lignes)
       setColonnesDetectees(lignes.length > 0 ? Object.keys(lignes[0]) : [])
       setStatut('')
+      if (!nomLot) {
+        setNomLot(`Import du ${new Date().toLocaleDateString('fr-FR')}`)
+      }
     }
     reader.readAsBinaryString(f)
   }
@@ -442,6 +462,8 @@ function ListesPanel() {
       return
     }
     setStatut('Import en cours...')
+    const batchId = `batch_${Date.now()}`
+    const libelleLot = nomLot || `Import du ${new Date().toLocaleDateString('fr-FR')}`
     const updates = {}
     apercu.forEach((ligne, idx) => {
       const nom = extraireValeur(ligne, ['nom', 'name', 'الاسم', 'nom complet'])
@@ -454,6 +476,9 @@ function ListesPanel() {
         nom,
         telephone,
         statut: 'en_attente',
+        batchId,
+        nomLot: libelleLot,
+        dateImport: Date.now(),
       }
     })
     await update(ref(db), updates)
@@ -461,41 +486,153 @@ function ListesPanel() {
     setStatut(`${Object.keys(updates).length} contacts importés et assignés avec succès.`)
     setApercu([])
     setColonnesDetectees([])
+    setNomLot('')
+  }
+
+  return (
+    <>
+      <div className="card">
+        <h3>Importer une liste (fichier Excel)</h3>
+        <p className="hint">Colonnes attendues : Nom, Telephone (variantes acceptées)</p>
+
+        <label className="select-label">
+          Nom du lot (pour archivage ultérieur)
+          <input type="text" value={nomLot} onChange={(e) => setNomLot(e.target.value)} placeholder="Ex: Lot Août - Groupe A" />
+        </label>
+
+        <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFichier} />
+
+        {colonnesDetectees.length > 0 && (
+          <p className="hint">Colonnes trouvées dans le fichier : {colonnesDetectees.join(', ')}</p>
+        )}
+
+        {apercu.length > 0 && (
+          <>
+            <p className="hint">{apercu.length} lignes détectées.</p>
+
+            <label className="select-label">
+              Assigner à l'agent :
+              <select value={agentChoisi} onChange={(e) => setAgentChoisi(e.target.value)}>
+                <option value="">-- Choisir --</option>
+                {Object.entries(AGENTS).map(([uid, nom]) => (
+                  <option key={uid} value={uid}>
+                    {nom}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <button className="btn-primaire" onClick={importerEtAssigner}>
+              Importer et assigner
+            </button>
+          </>
+        )}
+
+        {statut && <p className="statut-import">{statut}</p>}
+      </div>
+
+      <ArchivesPanel toutesLesListes={toutesLesListes} />
+    </>
+  )
+}
+
+function ArchivesPanel({ toutesLesListes }) {
+  const [statutAction, setStatutAction] = useState('')
+
+  const lots = useMemo(() => {
+    const map = {}
+    Object.entries(toutesLesListes).forEach(([agentUid, contacts]) => {
+      Object.entries(contacts || {}).forEach(([contactId, c]) => {
+        if (!c.batchId) return
+        if (!map[c.batchId]) {
+          map[c.batchId] = {
+            batchId: c.batchId,
+            nomLot: c.nomLot || c.batchId,
+            agentUid,
+            agentNom: AGENTS[agentUid] || agentUid,
+            dateImport: c.dateImport,
+            total: 0,
+            archives: 0,
+            contactIds: [],
+          }
+        }
+        map[c.batchId].total += 1
+        if (c.archive) map[c.batchId].archives += 1
+        map[c.batchId].contactIds.push(contactId)
+      })
+    })
+    return Object.values(map).sort((a, b) => (b.dateImport || 0) - (a.dateImport || 0))
+  }, [toutesLesListes])
+
+  async function archiverLot(lot) {
+    if (!window.confirm(`Archiver le lot "${lot.nomLot}" (${lot.total} contacts) ? Il restera compté dans les rapports mais disparaîtra de la liste active de l'agent.`)) return
+    setStatutAction('Archivage en cours...')
+    const updates = {}
+    lot.contactIds.forEach((id) => {
+      updates[`calllists_by_agent/${lot.agentUid}/${id}/archive`] = true
+    })
+    await update(ref(db), updates)
+    setStatutAction('Lot archivé avec succès.')
+    setTimeout(() => setStatutAction(''), 3000)
+  }
+
+  async function desarchiverLot(lot) {
+    setStatutAction('Désarchivage en cours...')
+    const updates = {}
+    lot.contactIds.forEach((id) => {
+      updates[`calllists_by_agent/${lot.agentUid}/${id}/archive`] = false
+    })
+    await update(ref(db), updates)
+    setStatutAction('Lot désarchivé.')
+    setTimeout(() => setStatutAction(''), 3000)
+  }
+
+  async function supprimerLot(lot) {
+    if (!window.confirm(`Supprimer définitivement le lot "${lot.nomLot}" (${lot.total} contacts) ? Cette action est irréversible.`)) return
+    setStatutAction('Suppression en cours...')
+    const updates = {}
+    lot.contactIds.forEach((id) => {
+      updates[`calllists_by_agent/${lot.agentUid}/${id}`] = null
+    })
+    await update(ref(db), updates)
+    setStatutAction('Lot supprimé.')
+    setTimeout(() => setStatutAction(''), 3000)
   }
 
   return (
     <div className="card">
-      <h3>Importer une liste (fichier Excel)</h3>
-      <p className="hint">Colonnes attendues : Nom, Telephone (variantes acceptées)</p>
-      <input type="file" accept=".xlsx,.xls,.csv" onChange={handleFichier} />
-
-      {colonnesDetectees.length > 0 && (
-        <p className="hint">Colonnes trouvées dans le fichier : {colonnesDetectees.join(', ')}</p>
-      )}
-
-      {apercu.length > 0 && (
-        <>
-          <p className="hint">{apercu.length} lignes détectées.</p>
-
-          <label className="select-label">
-            Assigner à l'agent :
-            <select value={agentChoisi} onChange={(e) => setAgentChoisi(e.target.value)}>
-              <option value="">-- Choisir --</option>
-              {Object.entries(AGENTS).map(([uid, nom]) => (
-                <option key={uid} value={uid}>
-                  {nom}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <button className="btn-primaire" onClick={importerEtAssigner}>
-            Importer et assigner
-          </button>
-        </>
-      )}
-
-      {statut && <p className="statut-import">{statut}</p>}
+      <h3>Lots importés — archivage et suppression</h3>
+      {lots.length === 0 && <p className="hint">Aucun lot importé pour le moment.</p>}
+      {lots.map((lot) => {
+        const entierementArchive = lot.archives === lot.total && lot.total > 0
+        return (
+          <div key={lot.batchId} className="lot-row">
+            <div className="lot-row-header">
+              <span className="lot-nom">{lot.nomLot}</span>
+              <span className="lot-badge">{entierementArchive ? 'Archivé' : 'Actif'}</span>
+            </div>
+            <div className="lot-row-detail">
+              {lot.agentNom} · {lot.total} contacts
+              {lot.dateImport ? ` · ${new Date(lot.dateImport).toLocaleDateString('fr-FR')}` : ''}
+            </div>
+            <div className="lot-row-actions">
+              {entierementArchive ? (
+                <button className="btn-secondaire-mini" onClick={() => desarchiverLot(lot)}>
+                  Désarchiver
+                </button>
+              ) : (
+                <button className="btn-secondaire-mini" onClick={() => archiverLot(lot)}>
+                  Archiver
+                </button>
+              )}
+              <button className="btn-danger-mini" onClick={() => supprimerLot(lot)}>
+                Supprimer
+              </button>
+            </div>
+          </div>
+        )
+      })}
+      {statutAction && <p className="statut-import">{statutAction}</p>}
     </div>
   )
 }
