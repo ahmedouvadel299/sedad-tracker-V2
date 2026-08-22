@@ -3,8 +3,6 @@ import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 
-const NOM_ADMIN_SIGNATURE = 'Sellem brahim'
-const TITRE_ADMIN_SIGNATURE = 'Responsable de centre — contact'
 const BANQUE = 'Banque Mauritanienne pour l\'Investissement'
 
 const TYPES_RAPPORT = [
@@ -43,7 +41,9 @@ function formatDureeSec(sec) {
   return `${min}min ${s}s`
 }
 
-function RapportsPanel({ toutesLesListes, agents }) {
+function RapportsPanel({ toutesLesListes, agents, settings = {} }) {
+  const nomSignature = settings.nomSignature || 'Sellem brahim'
+  const titreSignature = settings.titreSignature || 'Responsable de centre — contact'
   const [type, setType] = useState('mensuel')
   const [dateJournaliere, setDateJournaliere] = useState(new Date().toISOString().slice(0, 10))
   const [dateDebut, setDateDebut] = useState(new Date().toISOString().slice(0, 10))
@@ -152,8 +152,8 @@ function RapportsPanel({ toutesLesListes, agents }) {
     const pageHeight = doc.internal.pageSize.height
     doc.setFontSize(9)
     doc.text('Signature :', 14, pageHeight - 25)
-    doc.text(NOM_ADMIN_SIGNATURE, 14, pageHeight - 19)
-    doc.text(TITRE_ADMIN_SIGNATURE, 14, pageHeight - 14)
+    doc.text(nomSignature, 14, pageHeight - 19)
+    doc.text(titreSignature, 14, pageHeight - 14)
   }
 
   function exporterPDF() {
