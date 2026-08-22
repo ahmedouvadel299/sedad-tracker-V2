@@ -128,20 +128,24 @@ function AgentDashboard() {
     setContactPourRaison({ contactId, type, dureeMs, anormale })
   }
 
-  async function confirmerRaison(raison) {
+  function confirmerRaison(raison) {
     if (!contactPourRaison) return
     const { contactId, type, dureeMs, anormale } = contactPourRaison
     const maintenantMs = serverNow()
-    await update(ref(db, `calllists_by_agent/${uid}/${contactId}`), {
+
+    setContactPourRaison(null)
+    setAppelEnCours(null)
+
+    update(ref(db, `calllists_by_agent/${uid}/${contactId}`), {
       statut: type === 'succes' ? 'traite' : 'echec',
       raison,
       dureeAppelSec: Math.round(dureeMs / 1000),
       dureeAnormale: anormale,
       dateTraite: maintenantMs,
       heureAppel: new Date(maintenantMs).getHours(),
+    }).catch(() => {
+      // En cas d'échec réseau, la liste se resynchronisera au prochain onValue.
     })
-    setContactPourRaison(null)
-    setAppelEnCours(null)
   }
 
   function annulerAppelEnCours() {
@@ -310,8 +314,17 @@ function AgentDashboard() {
   )
 }
 
+function debutAujourdhui() {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d.getTime()
+}
+
 function AujourdhuiPanel({ nom, contacts, objectifJour }) {
-  const fait = contacts.filter((c) => c.statut === 'traite' || c.statut === 'echec').length
+  const debut = debutAujourdhui()
+  const fait = contacts.filter(
+    (c) => c.statut === 'traite' && c.dateTraite && c.dateTraite >= debut,
+  ).length
 
   function heureSalutation() {
     const h = new Date().getHours()
