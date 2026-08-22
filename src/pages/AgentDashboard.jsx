@@ -43,6 +43,7 @@ function AgentDashboard() {
   const [appelEnCours, setAppelEnCours] = useState(null)
   const [maintenant, setMaintenant] = useState(Date.now())
   const [contactPourRaison, setContactPourRaison] = useState(null)
+  const [settings, setSettings] = useState({})
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -66,6 +67,14 @@ function AgentDashboard() {
   }, [uid])
 
   useEffect(() => {
+    const settingsRef = ref(db, 'settings')
+    const unsub = onValue(settingsRef, (snap) => {
+      setSettings(snap.val() || {})
+    })
+    return () => unsub()
+  }, [])
+
+  useEffect(() => {
     if (!appelEnCours) return
     const timer = setInterval(() => setMaintenant(Date.now()), 1000)
     return () => clearInterval(timer)
@@ -75,7 +84,7 @@ function AgentDashboard() {
     return Object.entries(contacts).map(([id, c]) => ({ id, ...c }))
   }, [contacts])
 
-  const maListe = listeContacts.filter((c) => c.statut === 'en_attente')
+  const maListe = listeContacts.filter((c) => c.statut === 'en_attente' && !c.archive)
   const listeAttente = listeContacts.filter(
     (c) => c.statut === 'echec' && (c.raison === 'Injoignable' || c.raison === 'En cours'),
   )
@@ -172,7 +181,11 @@ function AgentDashboard() {
       </nav>
 
       {onglet === 'aujourdhui' ? (
-        <AujourdhuiPanel nom={nom} contacts={listeContacts} />
+        <AujourdhuiPanel
+          nom={nom}
+          contacts={listeContacts}
+          objectifJour={Number(settings.objectifsParAgent?.[uid]) || Number(settings.objectifJournalier) || 125}
+        />
       ) : (
         <div className="card">
           <input
@@ -283,8 +296,7 @@ function AgentDashboard() {
   )
 }
 
-function AujourdhuiPanel({ nom, contacts }) {
-  const objectifJour = 30
+function AujourdhuiPanel({ nom, contacts, objectifJour }) {
   const fait = contacts.filter((c) => c.statut === 'traite' || c.statut === 'echec').length
 
   function heureSalutation() {
