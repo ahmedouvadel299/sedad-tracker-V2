@@ -103,6 +103,14 @@ function AdminDashboard() {
     navigate('/', { replace: true })
   }
 
+  const agentsOverrides = settings.agentsOverrides || {}
+  const agentsAffiches = Object.fromEntries(
+    Object.entries(AGENTS).map(([uid, nom]) => [uid, agentsOverrides[uid]?.nom || nom]),
+  )
+  const agentsActifs = Object.fromEntries(
+    Object.keys(AGENTS).map((uid) => [uid, agentsOverrides[uid]?.actif !== false]),
+  )
+
   return (
     <div className="page admin-page">
       <header className="agent-header">
@@ -145,18 +153,26 @@ function AdminDashboard() {
         </button>
       </nav>
 
-      {onglet === 'vue' && <VueEnsemble toutesLesListes={toutesLesListes} />}
-      {onglet === 'listes' && <ListesPanel toutesLesListes={toutesLesListes} />}
-      {onglet === 'equipe' && <EquipePanel toutesLesListes={toutesLesListes} />}
+      {onglet === 'vue' && <VueEnsemble toutesLesListes={toutesLesListes} agentsAffiches={agentsAffiches} />}
+      {onglet === 'listes' && (
+        <ListesPanel toutesLesListes={toutesLesListes} agentsAffiches={agentsAffiches} agentsActifs={agentsActifs} />
+      )}
+      {onglet === 'equipe' && (
+        <EquipePanel
+          toutesLesListes={toutesLesListes}
+          settings={settings}
+          agentsAffiches={agentsAffiches}
+        />
+      )}
       {onglet === 'rapports' && (
-        <RapportsPanel toutesLesListes={toutesLesListes} agents={AGENTS} settings={settings} />
+        <RapportsPanel toutesLesListes={toutesLesListes} agents={agentsAffiches} settings={settings} />
       )}
       {onglet === 'parametres' && <Parametres />}
     </div>
   )
 }
 
-function VueEnsemble({ toutesLesListes }) {
+function VueEnsemble({ toutesLesListes, agentsAffiches }) {
   const tousLesContacts = useMemo(() => {
     const liste = []
     Object.entries(toutesLesListes).forEach(([agentUid, contacts]) => {
@@ -188,13 +204,13 @@ function VueEnsemble({ toutesLesListes }) {
   }, [tousLesContacts])
 
   const donneesParAgent = useMemo(() => {
-    return Object.entries(AGENTS).map(([uid, nom]) => {
+    return Object.entries(agentsAffiches).map(([uid, nom]) => {
       const contacts = tousLesContacts.filter((c) => c.agentUid === uid)
       const traites = contacts.filter((c) => c.statut === 'traite').length
       const echecs = contacts.filter((c) => c.statut === 'echec').length
       return { nom: nom.split(' ')[0], nomComplet: nom, Réussis: traites, Échecs: echecs }
     })
-  }, [tousLesContacts])
+  }, [tousLesContacts, agentsAffiches])
 
   const donneesRepartition = useMemo(
     () => [
@@ -339,7 +355,7 @@ function VueEnsemble({ toutesLesListes }) {
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
-        <TopAgents tousLesContacts={tousLesContacts} />
+        <TopAgents tousLesContacts={tousLesContacts} agentsAffiches={agentsAffiches} />
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
@@ -349,7 +365,7 @@ function VueEnsemble({ toutesLesListes }) {
   )
 }
 
-function TopAgents({ tousLesContacts }) {
+function TopAgents({ tousLesContacts, agentsAffiches }) {
   const classement = useMemo(() => {
     const maintenant = new Date()
     const moisActuel = maintenant.getMonth()
@@ -364,7 +380,7 @@ function TopAgents({ tousLesContacts }) {
     })
 
     return Object.entries(compteurs)
-      .map(([uid, count]) => ({ uid, nom: AGENTS[uid] || uid, count }))
+      .map(([uid, count]) => ({ uid, nom: agentsAffiches[uid] || uid, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 3)
   }, [tousLesContacts])
@@ -427,7 +443,7 @@ function TopHeures({ tousLesContacts }) {
   )
 }
 
-function ListesPanel({ toutesLesListes }) {
+function ListesPanel({ toutesLesListes, agentsAffiches, agentsActifs }) {
   const [apercu, setApercu] = useState([])
   const [colonnesDetectees, setColonnesDetectees] = useState([])
   const [agentChoisi, setAgentChoisi] = useState('')
@@ -514,11 +530,13 @@ function ListesPanel({ toutesLesListes }) {
               Assigner à l'agent :
               <select value={agentChoisi} onChange={(e) => setAgentChoisi(e.target.value)}>
                 <option value="">-- Choisir --</option>
-                {Object.entries(AGENTS).map(([uid, nom]) => (
-                  <option key={uid} value={uid}>
-                    {nom}
-                  </option>
-                ))}
+                {Object.entries(agentsAffiches)
+                  .filter(([uid]) => agentsActifs[uid])
+                  .map(([uid, nom]) => (
+                    <option key={uid} value={uid}>
+                      {nom}
+                    </option>
+                  ))}
               </select>
             </label>
 
@@ -637,31 +655,181 @@ function ArchivesPanel({ toutesLesListes }) {
   )
 }
 
-function EquipePanel({ toutesLesListes }) {
-  const [agentSelectionne, setAgentSelectionne] = useState(null)
+function debutSemaine() {
+  const d = new Date()
+  const jour = d.getDay()
+  const lundi = new Date(d)
+  lundi.setDate(d.getDate() - ((jour + 6) % 7))
+  lundi.setHours(0, 0, 0, 0)
+  return lundi.getTime()
+}
 
-  const parAgent = Object.entries(AGENTS).map(([uid, nom]) => {
+function debutMois() {
+  const d = new Date()
+  return new Date(d.getFullYear(), d.getMonth(), 1).getTime()
+}
+
+function debutJourEquipe() {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d.getTime()
+}
+
+function EquipePanel({ toutesLesListes, settings, agentsAffiches }) {
+  const [agentSelectionne, setAgentSelectionne] = useState(null)
+  const [renommageUid, setRenommageUid] = useState(null)
+  const [nouveauNom, setNouveauNom] = useState('')
+  const [statutAction, setStatutAction] = useState('')
+
+  const objectifJournalier = Number(settings.objectifJournalier) || 125
+  const objectifHebdo = objectifJournalier * 6
+  const agentsOverrides = settings.agentsOverrides || {}
+
+  const dJour = debutJourEquipe()
+  const dSemaine = debutSemaine()
+  const dMois = debutMois()
+
+  const parAgent = Object.entries(agentsAffiches).map(([uid, nom]) => {
     const contacts = Object.values(toutesLesListes[uid] || {})
+    const traitesContacts = contacts.filter((c) => c.statut === 'traite')
+    const echecsContacts = contacts.filter((c) => c.statut === 'echec')
+    const totalTraiteOuEchec = traitesContacts.length + echecsContacts.length
+
+    const aujourdhui = traitesContacts.filter((c) => c.dateTraite >= dJour).length
+    const cetteSemaine = traitesContacts.filter((c) => c.dateTraite >= dSemaine).length
+    const ceMois = traitesContacts.filter((c) => c.dateTraite >= dMois).length
+
+    const dureeTotal = [...traitesContacts, ...echecsContacts].reduce((s, c) => s + (c.dureeAppelSec || 0), 0)
+    const dureeMoyenne = totalTraiteOuEchec > 0 ? Math.round(dureeTotal / totalTraiteOuEchec) : 0
+
+    const dernierAppel = contacts.reduce((max, c) => (c.dateTraite && c.dateTraite > max ? c.dateTraite : max), 0)
+
+    const tauxReussite =
+      totalTraiteOuEchec > 0 ? Math.round((traitesContacts.length / totalTraiteOuEchec) * 100) : 0
+
+    const etoiles = Math.max(0, Math.min(5, Math.round((cetteSemaine / objectifHebdo) * 5)))
+    const actif = agentsOverrides[uid]?.actif !== false
+
     return {
       uid,
       nom,
       total: contacts.length,
       enAttente: contacts.filter((c) => c.statut === 'en_attente').length,
-      traites: contacts.filter((c) => c.statut === 'traite').length,
-      echecs: contacts.filter((c) => c.statut === 'echec').length,
+      traites: traitesContacts.length,
+      echecs: echecsContacts.length,
+      aujourdhui,
+      cetteSemaine,
+      ceMois,
+      dureeMoyenne,
+      dernierAppel,
+      tauxReussite,
+      etoiles,
+      actif,
     }
   })
 
+  function formatDureeMoyenne(sec) {
+    if (!sec) return '—'
+    const m = Math.floor(sec / 60)
+    const s = sec % 60
+    return m > 0 ? `${m}min ${s}s` : `${s}s`
+  }
+
+  function formatDernierAppel(ts) {
+    if (!ts) return 'Aucun appel enregistré'
+    const jours = Math.floor((Date.now() - ts) / (24 * 60 * 60 * 1000))
+    if (jours === 0) return "Aujourd'hui"
+    if (jours === 1) return 'Hier'
+    return `Il y a ${jours} jours`
+  }
+
+  function commencerRenommage(a) {
+    setRenommageUid(a.uid)
+    setNouveauNom(a.nom)
+  }
+
+  async function enregistrerRenommage(uid) {
+    if (!nouveauNom.trim()) return
+    setStatutAction('Enregistrement...')
+    await update(ref(db, `settings/agentsOverrides/${uid}`), { nom: nouveauNom.trim() })
+    setRenommageUid(null)
+    setStatutAction('')
+  }
+
+  async function basculerActif(a) {
+    setStatutAction('Mise à jour...')
+    await update(ref(db, `settings/agentsOverrides/${a.uid}`), { actif: !a.actif })
+    setStatutAction('')
+  }
+
   return (
     <div className="card">
+      <p className="hint">
+        Ajout ou suppression d'un compte agent se fait toujours via Firebase Console (création manuelle
+        unique). Le nom et le statut actif/inactif se gèrent ici directement.
+      </p>
+
       {parAgent.map((a) => (
-        <div key={a.uid} className="agent-row" onClick={() => setAgentSelectionne(a.uid === agentSelectionne ? null : a.uid)}>
-          <div className="agent-row-header">
-            <span className="agent-row-nom">{a.nom}</span>
+        <div key={a.uid} className="equipe-carte">
+          <div className="equipe-carte-header" onClick={() => setAgentSelectionne(a.uid === agentSelectionne ? null : a.uid)}>
+            <div>
+              {renommageUid === a.uid ? (
+                <div className="equipe-renommage" onClick={(e) => e.stopPropagation()}>
+                  <input value={nouveauNom} onChange={(e) => setNouveauNom(e.target.value)} />
+                  <button className="btn-secondaire-mini" onClick={() => enregistrerRenommage(a.uid)}>
+                    Valider
+                  </button>
+                  <button className="btn-danger-mini" onClick={() => setRenommageUid(null)}>
+                    Annuler
+                  </button>
+                </div>
+              ) : (
+                <span className="equipe-nom">
+                  {a.nom} {!a.actif && <span className="lot-badge">Inactif</span>}
+                </span>
+              )}
+              <div className="equipe-etoiles">
+                {'★'.repeat(a.etoiles)}
+                {'☆'.repeat(5 - a.etoiles)}
+                <span className="hint"> · semaine en cours</span>
+              </div>
+            </div>
             <span className="agent-row-total">{a.total} contacts</span>
           </div>
-          <div className="agent-row-detail">
-            En attente: {a.enAttente} · Réussis: {a.traites} · Échecs: {a.echecs}
+
+          <div className="equipe-stats-grille">
+            <div>
+              <span className="equipe-stat-chiffre">{a.aujourdhui}</span>
+              <span className="equipe-stat-label">Aujourd'hui</span>
+            </div>
+            <div>
+              <span className="equipe-stat-chiffre">{a.cetteSemaine}</span>
+              <span className="equipe-stat-label">Cette semaine</span>
+            </div>
+            <div>
+              <span className="equipe-stat-chiffre">{a.ceMois}</span>
+              <span className="equipe-stat-label">Ce mois</span>
+            </div>
+            <div>
+              <span className="equipe-stat-chiffre">{a.tauxReussite}%</span>
+              <span className="equipe-stat-label">Réussite</span>
+            </div>
+          </div>
+
+          <div className="equipe-carte-detail">
+            En attente: {a.enAttente} · Durée moyenne: {formatDureeMoyenne(a.dureeMoyenne)} · Dernier appel:{' '}
+            {formatDernierAppel(a.dernierAppel)}
+          </div>
+
+          <div className="lot-row-actions" style={{ marginTop: 8 }}>
+            {renommageUid !== a.uid && (
+              <button className="btn-secondaire-mini" onClick={() => commencerRenommage(a)}>
+                Renommer
+              </button>
+            )}
+            <button className="btn-secondaire-mini" onClick={() => basculerActif(a)}>
+              {a.actif ? 'Désactiver' : 'Réactiver'}
+            </button>
           </div>
 
           {agentSelectionne === a.uid && (
@@ -677,6 +845,8 @@ function EquipePanel({ toutesLesListes }) {
           )}
         </div>
       ))}
+
+      {statutAction && <p className="statut-import">{statutAction}</p>}
     </div>
   )
 }
