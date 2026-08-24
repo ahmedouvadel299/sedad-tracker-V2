@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { ref, onValue, update } from 'firebase/database'
 import { auth, db } from '../firebase.js'
 import { useServerTimeOffset } from '../lib/useServerTime.js'
 import LogoIcon from './logo.jsx'
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts'
 
 const RAISONS_ECHEC = ['Injoignable', 'En cours', 'Refus', 'Numéro erroné', 'Autre']
 const RAISONS_SUCCES = [
@@ -45,6 +46,8 @@ function AgentDashboard() {
   const [maintenant, setMaintenant] = useState(Date.now())
   const [contactPourRaison, setContactPourRaison] = useState(null)
   const [settings, setSettings] = useState({})
+  const [tri, setTri] = useState('recent')
+  const alerteJoueeRef = useRef(false)
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -76,10 +79,39 @@ function AgentDashboard() {
   }, [])
 
   useEffect(() => {
-    if (!appelEnCours) return
+    if (!appelEnCours) {
+      alerteJoueeRef.current = false
+      return
+    }
     const timer = setInterval(() => setMaintenant(Date.now()), 1000)
     return () => clearInterval(timer)
   }, [appelEnCours])
+
+  useEffect(() => {
+    if (!appelEnCours) return
+    const dureeMs = maintenant - appelEnCours.debut
+    if (dureeMs > SEUIL_DUREE_ANORMALE && !alerteJoueeRef.current) {
+      alerteJoueeRef.current = true
+      try {
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200])
+      } catch (e) {
+        // vibration non supportée sur cet appareil
+      }
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)()
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.frequency.value = 880
+        gain.gain.setValueAtTime(0.15, ctx.currentTime)
+        osc.start()
+        osc.stop(ctx.currentTime + 0.4)
+      } catch (e) {
+        // audio non supporté sur cet appareil
+      }
+    }
+  }, [maintenant, appelEnCours])
 
   const listeContacts = useMemo(() => {
     return Object.entries(contacts).map(([id, c]) => ({ id, ...c }))
@@ -104,13 +136,23 @@ function AgentDashboard() {
   )
 
   const listeAffichee = onglet === 'maListe' ? maListe : listeAttente
-  const listeFiltree = recherche
+  const listeRecherchee = recherche
     ? listeAffichee.filter(
         (c) =>
           c.nom?.toLowerCase().includes(recherche.toLowerCase()) ||
           c.telephone?.includes(recherche),
       )
     : listeAffichee
+
+  const listeFiltree = useMemo(() => {
+    const copie = [...listeRecherchee]
+    if (tri === 'alpha') {
+      copie.sort((a, b) => (a.nom || '').localeCompare(b.nom || '', 'fr'))
+    } else {
+      copie.sort((a, b) => (b.dateTraite || 0) - (a.dateTraite || 0))
+    }
+    return copie
+  }, [listeRecherchee, tri])
 
   function serverNow() {
     return Date.now() + offset
@@ -206,12 +248,18 @@ function AgentDashboard() {
         />
       ) : (
         <div className="card">
-          <input
-            className="recherche-input"
-            placeholder="Rechercher par nom ou téléphone..."
-            value={recherche}
-            onChange={(e) => setRecherche(e.target.value)}
-          />
+          <div className="recherche-ligne">
+            <input
+              className="recherche-input"
+              placeholder="Rechercher par nom ou téléphone..."
+              value={recherche}
+              onChange={(e) => setRecherche(e.target.value)}
+            />
+            <select className="tri-select" value={tri} onChange={(e) => setTri(e.target.value)}>
+              <option value="recent">Plus récent</option>
+              <option value="alpha">Ordre alphabétique</option>
+            </select>
+          </div>
 
           {listeFiltree.length === 0 && <p className="liste-vide">Aucun contact à afficher.</p>}
 
@@ -314,17 +362,79 @@ function AgentDashboard() {
   )
 }
 
-function debutAujourdhui() {
+function debutJourneeAvecDecalage(joursAvant) {
   const d = new Date()
+  d.setDate(d.getDate() - joursAvant)
   d.setHours(0, 0, 0, 0)
-  return d.getTime()
+  return d
 }
+
+function debutAujourdhui() {
+  return debutJourneeAvecDecalage(0).getTime()
+}
+
+function debutSemaineAgent() {
+  const d = new Date()
+  const jour = d.getDay()
+  const lundi = new Date(d)
+  lundi.setDate(d.getDate() - ((jour + 6) % 7))
+  lundi.setHours(0, 0, 0, 0)
+  return lundi
+}
+
+function debutMoisAgent() {
+  const d = new Date()
+  return new Date(d.getFullYear(), d.getMonth(), 1).getTime()
+}
+
+const NOMS_JOURS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 
 function AujourdhuiPanel({ nom, contacts, objectifJour }) {
   const debut = debutAujourdhui()
   const fait = contacts.filter(
     (c) => c.statut === 'traite' && c.dateTraite && c.dateTraite >= debut,
   ).length
+  const objectifAtteint = fait >= objectifJour
+
+  const objectifHebdo = objectifJour * 6
+
+  const donneesSemaine = useMemo(() => {
+    const lundi = debutSemaineAgent()
+    const jours = []
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(lundi)
+      d.setDate(lundi.getDate() + i)
+      jours.push({ date: d, label: NOMS_JOURS[d.getDay()], reussis: 0 })
+    }
+    contacts.forEach((c) => {
+      if (c.statut !== 'traite' || !c.dateTraite) return
+      const d = new Date(c.dateTraite)
+      d.setHours(0, 0, 0, 0)
+      const jour = jours.find((j) => j.date.getTime() === d.getTime())
+      if (jour) jour.reussis += 1
+    })
+    return jours
+  }, [contacts])
+
+  const totalSemaine = donneesSemaine.reduce((s, j) => s + j.reussis, 0)
+  const totalMois = contacts.filter(
+    (c) => c.statut === 'traite' && c.dateTraite && c.dateTraite >= debutMoisAgent(),
+  ).length
+
+  const meilleurJour = donneesSemaine.reduce(
+    (meilleur, j) => (j.reussis > meilleur.reussis ? j : meilleur),
+    donneesSemaine[0],
+  )
+
+  const etoiles = Math.max(0, Math.min(5, Math.round((totalSemaine / objectifHebdo) * 5)))
+
+  const dernierAppelTs = contacts.reduce(
+    (max, c) => (c.dateTraite && c.dateTraite > max ? c.dateTraite : max),
+    0,
+  )
+  const joursSansActivite = dernierAppelTs
+    ? Math.floor((Date.now() - dernierAppelTs) / (24 * 60 * 60 * 1000))
+    : null
 
   function heureSalutation() {
     const h = new Date().getHours()
@@ -339,20 +449,75 @@ function AujourdhuiPanel({ nom, contacts, objectifJour }) {
         👋 {heureSalutation()}, <strong>{nom}</strong>
       </p>
 
-      {fait < objectifJour && (
+      {objectifAtteint ? (
+        <div className="alerte-succes">🎉 Objectif du jour atteint — excellent travail !</div>
+      ) : (
         <div className="alerte-retard">
           Il reste {objectifJour - fait} opérations pour atteindre l'objectif du jour
         </div>
       )}
 
+      {joursSansActivite !== null && joursSansActivite >= 2 && (
+        <div className="alerte-inactivite">Aucune activité depuis {joursSansActivite} jours</div>
+      )}
+
       <div className="progres-cercle-wrapper">
         <div
-          className="progres-cercle"
+          className={`progres-cercle ${objectifAtteint ? 'progres-cercle-atteint' : ''}`}
           style={{ '--pct': Math.min(100, Math.round((fait / objectifJour) * 100)) }}
         >
           <span className="progres-chiffre">{fait}</span>
           <span className="progres-total">sur {objectifJour} aujourd'hui</span>
         </div>
+      </div>
+
+      <div className="agent-etoiles-wrapper">
+        <div className="equipe-etoiles agent-etoiles">
+          {'★'.repeat(etoiles)}
+          {'☆'.repeat(5 - etoiles)}
+        </div>
+        <p className="hint">Performance de la semaine</p>
+      </div>
+
+      <div className="equipe-stats-grille" style={{ marginTop: 12 }}>
+        <div>
+          <span className="equipe-stat-chiffre">{totalSemaine}</span>
+          <span className="equipe-stat-label">Cette semaine</span>
+        </div>
+        <div>
+          <span className="equipe-stat-chiffre">{totalMois}</span>
+          <span className="equipe-stat-label">Ce mois</span>
+        </div>
+      </div>
+
+      {meilleurJour.reussis > 0 && (
+        <p className="hint" style={{ textAlign: 'center', marginTop: 10 }}>
+          Votre meilleur jour cette semaine : <strong>{meilleurJour.label}</strong> avec{' '}
+          {meilleurJour.reussis} réussites
+        </p>
+      )}
+
+      <div style={{ marginTop: 16 }}>
+        <h3>Réussites de la semaine</h3>
+        <ResponsiveContainer width="100%" height={180}>
+          <BarChart data={donneesSemaine} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <defs>
+              <linearGradient id="gradAgentSemaine" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#7fd9a8" stopOpacity={1} />
+                <stop offset="100%" stopColor="#7fd9a8" stopOpacity={0.4} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#3a4f2f" />
+            <XAxis dataKey="label" tick={{ fill: '#cdd6c4', fontSize: 11 }} />
+            <YAxis tick={{ fill: '#cdd6c4', fontSize: 11 }} allowDecimals={false} />
+            <Tooltip contentStyle={{ background: '#16241a', border: '1px solid #c9a24b', borderRadius: 8 }} />
+            <Bar dataKey="reussis" radius={[6, 6, 0, 0]}>
+              {donneesSemaine.map((j, i) => (
+                <Cell key={i} fill={j.label === meilleurJour.label && j.reussis > 0 ? '#c9a24b' : 'url(#gradAgentSemaine)'} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   )
